@@ -1,0 +1,183 @@
+{
+  "generated_at": "2026-04-26T02:52:19.203887+00:00",
+  "h1_code_archaeology": {
+    "git_available": false,
+    "proxy_method": "file_mtime + log_head",
+    "detector_file": "dashboard/signal_log.py",
+    "detector_mtime": "2026-04-22T23:50:49.113667",
+    "daemon_mtime": "2026-04-26T11:00:48.212973",
+    "backfill_historical_mtime": "2026-04-19T18:22:27.198598",
+    "daemon_first_run_log": "2026-04-24 17:42:43",
+    "per_event_type": [
+      {
+        "event_type": "REGIME_CHANGE",
+        "first_signal_ts": "2026-04-19T03:29:04.163617",
+        "last_signal_ts": "2026-04-26T01:00:00",
+        "total": 79
+      },
+      {
+        "event_type": "FUNDING_EXTREME",
+        "first_signal_ts": "2026-02-19T16:00:00",
+        "last_signal_ts": "2026-02-20T08:00:00",
+        "total": 3
+      },
+      {
+        "event_type": "FUNDING_FLIP",
+        "first_signal_ts": "2025-11-14T00:00:00",
+        "last_signal_ts": "2026-04-08T16:00:00",
+        "total": 21
+      },
+      {
+        "event_type": "Z_SPIKE",
+        "first_signal_ts": "2026-04-04T15:00:00",
+        "last_signal_ts": "2026-04-24T20:00:00",
+        "total": 35
+      }
+    ]
+  },
+  "h2_data_coverage": {
+    "per_symbol": {
+      "ARB/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "AVAX/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "BNB/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "BTC/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "ETH/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "OP/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "SOL/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      },
+      "XRP/USDT": {
+        "ohlcv_earliest": "2025-04-26T02:00:00",
+        "ohlcv_latest": "2026-04-26T02:00:00",
+        "ohlcv_bars": 8761,
+        "ohlcv_active_days": 366,
+        "funding_earliest": "2025-04-26T08:00:00",
+        "funding_latest": "2026-04-26T00:00:00",
+        "funding_rows": 1095,
+        "funding_active_days": 366
+      }
+    },
+    "news": {
+      "earliest": "2025-12-29T16:10:19",
+      "latest": "2026-04-25T22:05:44",
+      "total": 465,
+      "active_days": 25
+    }
+  },
+  "h3_replay_capability": {
+    "detector_query_limits": [
+      {
+        "call": "get_ohlcv",
+        "limit": 500
+      },
+      {
+        "call": "get_funding",
+        "limit": 500
+      },
+      {
+        "call": "get_ohlcv",
+        "limit": 500
+      },
+      {
+        "call": "get_ohlcv",
+        "limit": 500
+      }
+    ],
+    "uses_watermark_walk": true,
+    "forward_only_after_first_seed": true,
+    "explicit_replay_scripts": [],
+    "backfill_historical_script": "scripts/backfill_historical.py"
+  },
+  "bonus_funding_recalibration": {
+    "n_funding_rows_total": 8760,
+    "current_threshold": 0.001,
+    "current_threshold_pct": "0.1% per 8h (~109% APR)",
+    "n_above_current_threshold": 11,
+    "pct_above_current": 0.12557077625570776,
+    "distribution": {
+      "median": 7.785e-05,
+      "p75": 0.0001,
+      "p90": 0.0001,
+      "p95": 0.00012287,
+      "p99": 0.00024169,
+      "max": 0.00841627
+    },
+    "suggested": {
+      "p95_threshold": 0.00012287,
+      "p99_threshold": 0.00024169,
+      "expected_emits_at_p95": 439,
+      "expected_emits_at_p99": 89
+    }
+  },
+  "verdict": {
+    "dominant_cause": "H3",
+    "fixable": "Yes",
+    "effort_estimate": "Option A: 30min \u2014 bump limit to None (full history) di detect_*() calls. Option B: 2-4h \u2014 write detector_replay.py yang feed historical ohlcv batched + idempotent emit.",
+    "issues": [
+      "H1_CODE_YOUNG: detector lahir 3d ago",
+      "H3_LOOKBACK_CAP: detector queries limit=500 baris tanpa replay script \u2192 Q1-Q3 unreachable meskipun raw data ada"
+    ],
+    "code_age_days_proxy": 3
+  }
+}

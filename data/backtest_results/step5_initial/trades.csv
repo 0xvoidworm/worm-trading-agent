@@ -1,0 +1,5 @@
+id,ts,pair,direction,entry_price,size,status,exit_ts,exit_price,pnl,thesis,notes,signal_id
+1,2026-04-22 17:00:00,SOL/USDT,LONG,87.8,22.779043,OPEN,,,,REGIME_CHANGE SIG#62 SOL/USDT LONG t=10.48 ≥ 8.0. size=22.779 notional=2000. bias: Bullish.,,62
+2,2026-04-22 19:00:00,ETH/USDT,LONG,2392.65,0.835893,CLOSED,2026-04-23 20:00:00,2325.32,-60.61876559693094,REGIME_CHANGE SIG#63 ETH/USDT LONG t=12.55 ≥ 8.0. size=0.835893 notional=2000. bias: Bullish.,EXIT trade #2 ETH/USDT LONG: regime flipped to trending_down t=15.37,63
+3,2026-04-22 20:00:00,BNB/USDT,LONG,641.0,3.120125,OPEN,,,,REGIME_CHANGE SIG#64 BNB/USDT LONG t=11.69 ≥ 8.0. size=3.12012 notional=2000. bias: Bullish.,,64
+4,2026-04-23 21:00:00,ETH/USDT,SHORT,2321.23,0.856389,OPEN,,,,REGIME_CHANGE SIG#86 ETH/USDT SHORT t=15.37 ≥ 8.0. size=0.856389 notional=1988. bias: Bearish.,,86

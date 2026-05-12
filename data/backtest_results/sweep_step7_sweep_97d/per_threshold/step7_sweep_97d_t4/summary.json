@@ -1,0 +1,39 @@
+{
+  "label": "step7_sweep_97d_t4",
+  "start": "2026-01-19T00:00:00",
+  "end": "2026-04-26T00:00:00",
+  "cycle_hours": 1,
+  "n_cycles": 2329,
+  "starting_capital": 10000.0,
+  "exchange": "bybit",
+  "timeframe": "1h",
+  "strategy": {
+    "final_equity": 9753.08637238961,
+    "return_pct": -2.4691362761039115,
+    "max_drawdown_pct": 3.8814450015356146,
+    "sharpe_annualized": -1.8267666204344153,
+    "n_bars": 2329
+  },
+  "realized_return_pct": -2.469136276103906,
+  "mtm_return_pct": -2.4691362761039115,
+  "buy_hold_btc": {
+    "start_price": 92704.3,
+    "end_price": 77506.6,
+    "return_pct": -16.393737938801113
+  },
+  "edge_verdict": "insufficient_sample",
+  "insufficient_sample_threshold": 30,
+  "n_trades_total": 4,
+  "n_trades_closed": 4,
+  "n_trades_open_at_end": 0,
+  "cycles_health_breakdown": {
+    "trading_OK": 2329,
+    "trading_GAP": 0,
+    "trading_STALE": 0,
+    "operational_OK": 99,
+    "operational_GAP": 2230
+  },
+  "gate_reason_counts": {},
+  "tmp_dir": "/tmp/bt_step7_sweep_97d_t4_2obpk4d1",
+  "regime_t_threshold": 4.0
+}

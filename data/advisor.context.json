@@ -1,0 +1,172 @@
+{
+  "generated_at": "2026-04-24T16:41:36.508079+00:00",
+  "exchange": "bybit",
+  "timeframe": "1h",
+  "health": {
+    "status": "STALE",
+    "summary": "ohlcv 0/8 fresh \u00b7 0 gap-symbols \u00b7 funding 0/8 fresh \u00b7 feeds 0/5 live",
+    "ohlcv_stale": [
+      {
+        "symbol": "BTC/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "ETH/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "SOL/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "BNB/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "XRP/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "AVAX/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "ARB/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      },
+      {
+        "symbol": "OP/USDT",
+        "timeframe": "1h",
+        "last_ts": "2026-04-22 19:00:00",
+        "age_hours": 45.693458704444446
+      }
+    ],
+    "ohlcv_gaps": [],
+    "feeds": [
+      {
+        "source": "coindesk",
+        "count_24h": 0,
+        "ok": false
+      },
+      {
+        "source": "cointelegraph",
+        "count_24h": 0,
+        "ok": false
+      },
+      {
+        "source": "theblock",
+        "count_24h": 0,
+        "ok": false
+      },
+      {
+        "source": "decrypt",
+        "count_24h": 0,
+        "ok": false
+      },
+      {
+        "source": "bitcoinmag",
+        "count_24h": 0,
+        "ok": false
+      }
+    ]
+  },
+  "signals": [
+    {
+      "sig_num": 386,
+      "ts": "2026-04-22T19:00:00",
+      "event_type": "REGIME_CHANGE",
+      "symbol": "BNB/USDT",
+      "severity": "info",
+      "payload": "from=ranging;to=trending_up;t=11.69"
+    },
+    {
+      "sig_num": 387,
+      "ts": "2026-04-22T19:00:00",
+      "event_type": "REGIME_CHANGE",
+      "symbol": "ETH/USDT",
+      "severity": "info",
+      "payload": "from=ranging;to=trending_up;t=12.55"
+    },
+    {
+      "sig_num": 385,
+      "ts": "2026-04-22T17:00:00",
+      "event_type": "REGIME_CHANGE",
+      "symbol": "SOL/USDT",
+      "severity": "info",
+      "payload": "from=ranging;to=trending_up;t=10.48"
+    }
+  ],
+  "open_trades": [
+    {
+      "id": 4,
+      "ts": "2026-04-24T14:35:16.811883",
+      "pair": "SOL/USDT",
+      "direction": "LONG",
+      "entry_price": 145.2,
+      "size": 10.0,
+      "thesis": "Regime shift to trending_up per SIG#385",
+      "status": "OPEN",
+      "exit_ts": null,
+      "exit_price": null,
+      "pnl": null,
+      "notes": null,
+      "signal_id": 385
+    }
+  ],
+  "news": [
+    {
+      "published_at": "2026-04-22T16:28:21",
+      "source": "decrypt",
+      "title": "'Axie Infinity' Gaming Network Ronin Sets Date for Ethereum Layer-2 Migration",
+      "url": "https://decrypt.co/365131/axie-infinity-gaming-network-ronin-ethereum-layer-2-migration",
+      "symbols": "ETH"
+    },
+    {
+      "published_at": "2026-04-22T16:19:07",
+      "source": "cointelegraph",
+      "title": "Ethereum risks 10% decline versus Bitcoin despite record ETH staking",
+      "url": "https://cointelegraph.com/news/ethereum-decline-10percent-versus-bitcoin-despite-record-eth-staking?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "symbols": "BTC,ETH"
+    },
+    {
+      "published_at": "2026-04-22T15:47:59",
+      "source": "decrypt",
+      "title": "GSR Launches Actively Managed Bitcoin, Ethereum and Solana Basket ETF on Nasdaq",
+      "url": "https://decrypt.co/365127/gsr-actively-managed-bitcoin-ethereum-solana-etf-nasdaq",
+      "symbols": "BTC,ETH,SOL"
+    },
+    {
+      "published_at": "2026-04-22T13:00:00",
+      "source": "theblock",
+      "title": "GSR enters crypto ETF field with actively managed multi-asset fund tracking Bitcoin, Ethereum and Solana",
+      "url": "https://www.theblock.co/post/398443/gsr-crypto-etf-actively-managed-multi-asset-core3-bitcoin-ethereum-solana?utm_source=rss&utm_medium=rss",
+      "symbols": "BTC,ETH,SOL"
+    },
+    {
+      "published_at": "2026-04-22T02:24:02",
+      "source": "theblock",
+      "title": "Kelp DAO exploiter launders $80 million worth of ETH, mostly through THORChain: onchain analyst",
+      "url": "https://www.theblock.co/post/398382/kelp-dao-exploiter-launders-thorchain?utm_source=rss&utm_medium=rss",
+      "symbols": "ETH"
+    }
+  ],
+  "symbols_of_interest": [
+    "BNB",
+    "ETH",
+    "SOL"
+  ]
+}

@@ -1,0 +1,71 @@
+# Seed universe untuk dashboard observability
+# Tier 1: high liquidity, low slippage (fokus awal)
+# Tier 2: alt pairs untuk cointegration study nanti
+exchange: bybit  # {bybit, binance} — public data only, no API key needed
+timeframe: "1h"
+history_days: 60  # berapa hari historical di-backfill saat first run
+
+tier1:
+  - BTC/USDT
+  - ETH/USDT
+  - SOL/USDT
+
+tier2:
+  - BNB/USDT
+  - XRP/USDT
+  - AVAX/USDT
+  - ARB/USDT
+  - OP/USDT
+
+# Pair cointegration candidates (akan di-test rolling)
+cointegration_candidates:
+  - [ETH/USDT, BTC/USDT]
+  - [SOL/USDT, ETH/USDT]
+  - [ARB/USDT, OP/USDT]
+  - [AVAX/USDT, SOL/USDT]
+
+# Step 17.A2 — REGIME_CHANGE debounce: emit hanya saat new regime stable ≥ N
+# consecutive bars. Step 11 surface noise (REGIME 89× inflation 365d replay)
+# karena classify() bar-per-bar flicker tanpa filter. Default 3 = good signal/noise.
+regime_debounce_bars: 3
+
+# Portfolio accounting + risk-based sizing caps. Konsumsi oleh
+# data_pipe.portfolio + data_pipe.sizing. Default konservatif:
+# max_gross 100% = 1× leverage (paper). Daily-loss killswitch belum ada
+# (Step 4) — jangan naikkan sebelum itu.
+portfolio:
+  starting_capital: 10000.0       # USDT, base equity untuk paper accounting
+  risk_pct_per_trade: 1.0         # % equity yang di-risk per trade (size × jarak SL)
+  max_position_pct: 25.0          # cap notional per posisi vs equity
+  max_gross_exposure_pct: 100.0   # cap total |notional| open vs equity
+  max_concurrent_trades: 3        # cap jumlah open positions
+  daily_loss_killswitch_pct: 2.0  # daily_pnl_pct ≤ -ini → block ENTRY (manual reset)
+  daily_loss_warn_pct: 1.0        # daily_pnl_pct ≤ -ini → emit RISK_WARN signal
+
+# Auto-exit triggers untuk modul data_pipe.auto_exit.
+# Override default in code by editing values below. Semua opsional — kalau
+# blok ini dihapus, default modul yang dipakai.
+exits:
+  stop_loss_pct: 5.0           # |unrealized| ≥ ini → SL fire (LONG/SHORT mirror)
+  take_profit_pct: 5.0         # unrealized ≥ ini (in profit direction) → TP fire
+  max_hold_hours: 72           # age trade ≥ ini → time-stop
+  regime_flip_t_threshold: 6.0 # exit lebih sensitif dari ENTRY (8.0)
+  window_hours: 4              # cari REGIME_CHANGE dalam window ini
+
+# Auto-advisor detector dispatch (Step 14B). Default behavior =
+# REGIME_CHANGE (Step <14B). Untuk paper backtest mode FUNDING_FLIP-only,
+# set `detector_whitelist: ["FUNDING_FLIP"]` dan optionally tweak band.
+# Production daemon: jangan ubah default sebelum sweep validate edge.
+#
+# advisor:
+#   detector_whitelist: ["FUNDING_FLIP"]
+#   funding_flip:
+#     band_min: 0.0001   # 0.01% (decimal). Dominant band per Step 13B D3.
+#     band_max: 0.0003   # 0.03% (exclusive upper).
+
+# Funding rate thresholds untuk dashboard alerts
+funding:
+  # 8h rate (decimal, bukan %). 0.0005 = 0.05% per 8h ~= 0.15%/day
+  neutral_band: [-0.0001, 0.0001]
+  elevated: 0.0005      # warning: long bias kuat
+  extreme: 0.001        # signal: funding arb window terbuka

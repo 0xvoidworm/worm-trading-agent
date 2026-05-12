@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+data/market.duckdb
+data/market.duckdb.*
+data/*.log
+data/*.log.bg
+data/*.killswitch
+.env
+.env.*
+*.session

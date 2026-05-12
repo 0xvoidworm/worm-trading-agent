@@ -1,0 +1,48 @@
+{
+  "label": "step15b_funding_flip_3y_V3",
+  "start": "2023-04-27T00:00:00",
+  "end": "2026-04-26T00:00:00",
+  "cycle_hours": 1,
+  "n_cycles": 26281,
+  "starting_capital": 10000.0,
+  "exchange": "bybit",
+  "timeframe": "1h",
+  "strategy": {
+    "final_equity": 8634.854613689537,
+    "return_pct": -13.651453863104635,
+    "max_drawdown_pct": 13.959400452615544,
+    "sharpe_annualized": -1.1487090156950557,
+    "n_bars": 26281
+  },
+  "realized_return_pct": -13.65145386310464,
+  "mtm_return_pct": -13.651453863104635,
+  "buy_hold_btc": {
+    "start_price": 28858.91,
+    "end_price": 77506.6,
+    "return_pct": 168.57078108632658
+  },
+  "edge_verdict": "negative",
+  "insufficient_sample_threshold": 30,
+  "n_trades_total": 56,
+  "n_trades_closed": 56,
+  "n_trades_open_at_end": 0,
+  "cycles_health_breakdown": {
+    "trading_OK": 26269,
+    "trading_GAP": 0,
+    "trading_STALE": 12,
+    "operational_OK": 99,
+    "operational_GAP": 26182
+  },
+  "gate_reason_counts": {
+    "trading=STALE": 12
+  },
+  "tmp_dir": "/tmp/bt_step15b_funding_flip_3y_V3_vfaclot6",
+  "regime_t_threshold": null,
+  "multi_trade": {
+    "total_cycle_entries": 56,
+    "total_cycle_exits": 56,
+    "cycles_with_entry": 53,
+    "cycles_with_exit": 54,
+    "multi_trade_cycles": 6
+  }
+}

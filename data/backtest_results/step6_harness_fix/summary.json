@@ -1,0 +1,38 @@
+{
+  "label": "step6_harness_fix",
+  "start": "2026-02-26T00:00:00",
+  "end": "2026-04-25T00:00:00",
+  "cycle_hours": 1,
+  "n_cycles": 1393,
+  "starting_capital": 10000.0,
+  "exchange": "bybit",
+  "timeframe": "1h",
+  "strategy": {
+    "final_equity": 9701.208094475085,
+    "return_pct": -2.987919055249144,
+    "max_drawdown_pct": 4.580253845714234,
+    "sharpe_annualized": -2.79232043599224,
+    "n_bars": 1393
+  },
+  "realized_return_pct": -2.6393953524491542,
+  "mtm_return_pct": -2.987919055249144,
+  "buy_hold_btc": {
+    "start_price": 68332.6,
+    "end_price": 77458.8,
+    "return_pct": 13.355557962085452
+  },
+  "edge_verdict": "insufficient_sample",
+  "insufficient_sample_threshold": 30,
+  "n_trades_total": 5,
+  "n_trades_closed": 4,
+  "n_trades_open_at_end": 1,
+  "cycles_health_breakdown": {
+    "trading_OK": 1393,
+    "trading_GAP": 0,
+    "trading_STALE": 0,
+    "operational_OK": 88,
+    "operational_GAP": 1305
+  },
+  "gate_reason_counts": {},
+  "tmp_dir": "/tmp/bt_step6_harness_fix_v9ybytbb"
+}

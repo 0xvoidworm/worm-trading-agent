@@ -1,0 +1,527 @@
+{
+  "window": {
+    "start": "2025-04-26T00:00:00",
+    "end": "2026-04-26T00:00:00",
+    "n_days": 365
+  },
+  "buckets": [
+    0.0,
+    2.0,
+    4.0,
+    6.0,
+    8.0,
+    10.0,
+    15.0,
+    null
+  ],
+  "by_event_type": [
+    {
+      "event_type": "REGIME_CHANGE",
+      "total": 77,
+      "ts_min": "2026-04-19T03:29:04.163617",
+      "ts_max": "2026-04-25T22:00:00",
+      "by_quarter": [
+        {
+          "q": "Q1",
+          "start": "2025-04-26T00:00:00",
+          "end": "2025-07-26T06:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q2",
+          "start": "2025-07-26T06:00:00",
+          "end": "2025-10-25T12:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q3",
+          "start": "2025-10-25T12:00:00",
+          "end": "2026-01-24T18:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q4",
+          "start": "2026-01-24T18:00:00",
+          "end": "2026-04-26T00:00:00",
+          "count": 77
+        }
+      ],
+      "by_pair": {
+        "SOL/USDT": 12,
+        "AVAX/USDT": 12,
+        "OP/USDT": 11,
+        "ETH/USDT": 9,
+        "BNB/USDT": 9,
+        "BTC/USDT": 8,
+        "XRP/USDT": 8,
+        "ARB/USDT": 8
+      },
+      "n_active_days": 5,
+      "stats": {
+        "n_with_strength": 77,
+        "n_unparseable": 0,
+        "min": 0.06,
+        "p25": 1.73,
+        "median": 2.66,
+        "p75": 7.44,
+        "p95": 15.395999999999999,
+        "max": 18.03,
+        "mean": 5.145844155844156
+      },
+      "histogram": [
+        {
+          "bucket": "[0,2)",
+          "lo": 0.0,
+          "hi": 2.0,
+          "count": 24,
+          "pct": 31.16883116883117
+        },
+        {
+          "bucket": "[2,4)",
+          "lo": 2.0,
+          "hi": 4.0,
+          "count": 22,
+          "pct": 28.57142857142857
+        },
+        {
+          "bucket": "[4,6)",
+          "lo": 4.0,
+          "hi": 6.0,
+          "count": 9,
+          "pct": 11.688311688311687
+        },
+        {
+          "bucket": "[6,8)",
+          "lo": 6.0,
+          "hi": 8.0,
+          "count": 4,
+          "pct": 5.194805194805195
+        },
+        {
+          "bucket": "[8,10)",
+          "lo": 8.0,
+          "hi": 10.0,
+          "count": 2,
+          "pct": 2.5974025974025974
+        },
+        {
+          "bucket": "[10,15)",
+          "lo": 10.0,
+          "hi": 15.0,
+          "count": 11,
+          "pct": 14.285714285714285
+        },
+        {
+          "bucket": "[15,+inf)",
+          "lo": 15.0,
+          "hi": null,
+          "count": 5,
+          "pct": 6.493506493506493
+        }
+      ],
+      "gap_stats": {
+        "n_gaps": 76,
+        "mean_h": 2.1383619750840643,
+        "median_h": 0.5,
+        "max_h": 83.22600546555555
+      }
+    },
+    {
+      "event_type": "FUNDING_EXTREME",
+      "total": 3,
+      "ts_min": "2026-02-19T16:00:00",
+      "ts_max": "2026-02-20T08:00:00",
+      "by_quarter": [
+        {
+          "q": "Q1",
+          "start": "2025-04-26T00:00:00",
+          "end": "2025-07-26T06:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q2",
+          "start": "2025-07-26T06:00:00",
+          "end": "2025-10-25T12:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q3",
+          "start": "2025-10-25T12:00:00",
+          "end": "2026-01-24T18:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q4",
+          "start": "2026-01-24T18:00:00",
+          "end": "2026-04-26T00:00:00",
+          "count": 3
+        }
+      ],
+      "by_pair": {
+        "OP/USDT": 3
+      },
+      "n_active_days": 2,
+      "stats": {
+        "n_with_strength": 3,
+        "n_unparseable": 0,
+        "min": 0.1126,
+        "p25": 0.11405000000000001,
+        "median": 0.1155,
+        "p75": 0.185,
+        "p95": 0.24059999999999998,
+        "max": 0.2545,
+        "mean": 0.16086666666666669
+      },
+      "histogram": [
+        {
+          "bucket": "[0,2)",
+          "lo": 0.0,
+          "hi": 2.0,
+          "count": 3,
+          "pct": 100.0
+        },
+        {
+          "bucket": "[2,4)",
+          "lo": 2.0,
+          "hi": 4.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[4,6)",
+          "lo": 4.0,
+          "hi": 6.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[6,8)",
+          "lo": 6.0,
+          "hi": 8.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[8,10)",
+          "lo": 8.0,
+          "hi": 10.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[10,15)",
+          "lo": 10.0,
+          "hi": 15.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[15,+inf)",
+          "lo": 15.0,
+          "hi": null,
+          "count": 0,
+          "pct": 0.0
+        }
+      ],
+      "gap_stats": {
+        "n_gaps": 2,
+        "mean_h": 8.0,
+        "median_h": 8.0,
+        "max_h": 8.0
+      }
+    },
+    {
+      "event_type": "FUNDING_FLIP",
+      "total": 21,
+      "ts_min": "2025-11-14T00:00:00",
+      "ts_max": "2026-04-08T16:00:00",
+      "by_quarter": [
+        {
+          "q": "Q1",
+          "start": "2025-04-26T00:00:00",
+          "end": "2025-07-26T06:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q2",
+          "start": "2025-07-26T06:00:00",
+          "end": "2025-10-25T12:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q3",
+          "start": "2025-10-25T12:00:00",
+          "end": "2026-01-24T18:00:00",
+          "count": 10
+        },
+        {
+          "q": "Q4",
+          "start": "2026-01-24T18:00:00",
+          "end": "2026-04-26T00:00:00",
+          "count": 11
+        }
+      ],
+      "by_pair": {
+        "ARB/USDT": 8,
+        "AVAX/USDT": 7,
+        "SOL/USDT": 4,
+        "OP/USDT": 1,
+        "BNB/USDT": 1
+      },
+      "n_active_days": 18,
+      "stats": {
+        "n_with_strength": 21,
+        "n_unparseable": 0,
+        "min": 0.0202,
+        "p25": 0.022,
+        "median": 0.0238,
+        "p75": 0.0307,
+        "p95": 0.0384,
+        "max": 0.0397,
+        "mean": 0.02647619047619048
+      },
+      "histogram": [
+        {
+          "bucket": "[0,2)",
+          "lo": 0.0,
+          "hi": 2.0,
+          "count": 21,
+          "pct": 100.0
+        },
+        {
+          "bucket": "[2,4)",
+          "lo": 2.0,
+          "hi": 4.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[4,6)",
+          "lo": 4.0,
+          "hi": 6.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[6,8)",
+          "lo": 6.0,
+          "hi": 8.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[8,10)",
+          "lo": 8.0,
+          "hi": 10.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[10,15)",
+          "lo": 10.0,
+          "hi": 15.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[15,+inf)",
+          "lo": 15.0,
+          "hi": null,
+          "count": 0,
+          "pct": 0.0
+        }
+      ],
+      "gap_stats": {
+        "n_gaps": 20,
+        "mean_h": 174.8,
+        "median_h": 76.0,
+        "max_h": 816.0
+      }
+    },
+    {
+      "event_type": "Z_SPIKE",
+      "total": 35,
+      "ts_min": "2026-04-04T15:00:00",
+      "ts_max": "2026-04-24T20:00:00",
+      "by_quarter": [
+        {
+          "q": "Q1",
+          "start": "2025-04-26T00:00:00",
+          "end": "2025-07-26T06:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q2",
+          "start": "2025-07-26T06:00:00",
+          "end": "2025-10-25T12:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q3",
+          "start": "2025-10-25T12:00:00",
+          "end": "2026-01-24T18:00:00",
+          "count": 0
+        },
+        {
+          "q": "Q4",
+          "start": "2026-01-24T18:00:00",
+          "end": "2026-04-26T00:00:00",
+          "count": 35
+        }
+      ],
+      "by_pair": {
+        "SOL/USDT|ETH/USDT": 18,
+        "AVAX/USDT|SOL/USDT": 17
+      },
+      "n_active_days": 16,
+      "stats": {
+        "n_with_strength": 11,
+        "n_unparseable": 24,
+        "min": 2.0,
+        "p25": 2.16,
+        "median": 2.25,
+        "p75": 2.6799999999999997,
+        "p95": 3.745,
+        "max": 4.12,
+        "mean": 2.5436363636363635
+      },
+      "histogram": [
+        {
+          "bucket": "[0,2)",
+          "lo": 0.0,
+          "hi": 2.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[2,4)",
+          "lo": 2.0,
+          "hi": 4.0,
+          "count": 10,
+          "pct": 28.57142857142857
+        },
+        {
+          "bucket": "[4,6)",
+          "lo": 4.0,
+          "hi": 6.0,
+          "count": 1,
+          "pct": 2.857142857142857
+        },
+        {
+          "bucket": "[6,8)",
+          "lo": 6.0,
+          "hi": 8.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[8,10)",
+          "lo": 8.0,
+          "hi": 10.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[10,15)",
+          "lo": 10.0,
+          "hi": 15.0,
+          "count": 0,
+          "pct": 0.0
+        },
+        {
+          "bucket": "[15,+inf)",
+          "lo": 15.0,
+          "hi": null,
+          "count": 0,
+          "pct": 0.0
+        }
+      ],
+      "gap_stats": {
+        "n_gaps": 34,
+        "mean_h": 14.264705882352942,
+        "median_h": 7.0,
+        "max_h": 58.0
+      }
+    }
+  ],
+  "cross_event": {
+    "regime_only": {
+      "n_date_pair_tuples": 40,
+      "n_unique_days": 5
+    },
+    "fusion_all": {
+      "n_date_pair_tuples": 85,
+      "n_unique_days": 37,
+      "uplift_dp_pct": 112.5,
+      "uplift_days_pct": 640.0
+    },
+    "extra_days_per_type": {
+      "FUNDING_EXTREME": {
+        "extra_days": [
+          "2026-02-19",
+          "2026-02-20"
+        ],
+        "n_extra_days": 2
+      },
+      "FUNDING_FLIP": {
+        "extra_days": [
+          "2025-11-14",
+          "2025-11-23",
+          "2025-11-25",
+          "2025-11-27",
+          "2025-12-01",
+          "2025-12-10",
+          "2025-12-11",
+          "2025-12-17",
+          "2025-12-23",
+          "2026-01-26",
+          "2026-02-28",
+          "2026-03-06",
+          "2026-03-26",
+          "2026-04-02",
+          "2026-04-03",
+          "2026-04-05",
+          "2026-04-07",
+          "2026-04-08"
+        ],
+        "n_extra_days": 18
+      },
+      "Z_SPIKE": {
+        "extra_days": [
+          "2026-04-04",
+          "2026-04-05",
+          "2026-04-06",
+          "2026-04-07",
+          "2026-04-09",
+          "2026-04-12",
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17",
+          "2026-04-18",
+          "2026-04-20",
+          "2026-04-21"
+        ],
+        "n_extra_days": 14
+      }
+    },
+    "n_overlap_bars": 0,
+    "overlap_bars_sample": []
+  },
+  "verdict": {
+    "decision": "FUSION_GO",
+    "reason": "fusion uplifts (date,pair) tuples by 112% (\u22652x density) \u2014 worth integrating",
+    "issues": [],
+    "notes": [
+      "LOW_SUPPLY: FUNDING_EXTREME only 3 signals \u2014 fusion contribution marginal"
+    ],
+    "metrics": {
+      "regime_change_total": 77,
+      "fusion_dp_uplift_pct": 112.5,
+      "fusion_days_uplift_pct": 640.0,
+      "regime_dp": 40,
+      "fusion_dp": 85
+    }
+  }
+}

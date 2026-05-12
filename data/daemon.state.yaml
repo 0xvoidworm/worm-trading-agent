@@ -1,0 +1,24 @@
+abnormal_first_ts: null
+abnormal_signal_emitted: false
+consecutive_empty_cycles: 0
+feeds:
+  bitcoinmag:
+    consecutive_failures: 0
+    dead_signal_emitted: false
+    first_failure_ts: null
+  coindesk:
+    consecutive_failures: 0
+    dead_signal_emitted: false
+    first_failure_ts: null
+  cointelegraph:
+    consecutive_failures: 0
+    dead_signal_emitted: false
+    first_failure_ts: null
+  decrypt:
+    consecutive_failures: 0
+    dead_signal_emitted: false
+    first_failure_ts: null
+  theblock:
+    consecutive_failures: 0
+    dead_signal_emitted: false
+    first_failure_ts: null

@@ -1,0 +1,26 @@
+{
+  "label": "step5_initial",
+  "start": "2026-02-26T00:00:00",
+  "end": "2026-04-25T00:00:00",
+  "cycle_hours": 1,
+  "n_cycles": 1393,
+  "starting_capital": 10000.0,
+  "exchange": "bybit",
+  "timeframe": "1h",
+  "strategy": {
+    "final_equity": 9892.672833453069,
+    "return_pct": -1.0732716654693109,
+    "max_drawdown_pct": 1.5767551835736853,
+    "sharpe_annualized": -2.6332980311152223,
+    "n_bars": 1393
+  },
+  "buy_hold_btc": {
+    "start_price": 68332.6,
+    "end_price": 77458.8,
+    "return_pct": 13.355557962085452
+  },
+  "edge_verdict": "negative",
+  "n_trades_total": 4,
+  "n_trades_closed": 1,
+  "tmp_dir": "/tmp/bt_step5_initial_6npdr7ts"
+}

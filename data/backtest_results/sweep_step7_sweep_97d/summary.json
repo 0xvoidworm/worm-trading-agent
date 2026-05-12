@@ -1,0 +1,277 @@
+{
+  "label": "step7_sweep_97d",
+  "start": "2026-01-19T00:00:00",
+  "end": "2026-04-26T00:00:00",
+  "window_days": 97,
+  "quarters": 4,
+  "thresholds": [
+    2.66,
+    4.0,
+    6.0,
+    8.0
+  ],
+  "min_quarter_trades": 8,
+  "insufficient_total_threshold": 30,
+  "runs": [
+    {
+      "threshold": 2.66,
+      "label": "step7_sweep_97d_t2.66",
+      "elapsed_sec": 276.0119004249573,
+      "n_trades_total": 4,
+      "n_trades_closed": 4,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -2.469136276103906,
+      "mtm_return_pct": -2.4691362761039115,
+      "sharpe_annualized": -1.8267666204344153,
+      "max_drawdown_pct": 3.8814450015356146,
+      "edge_verdict_backtest": "insufficient_sample",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2026-01-19T00:00:00",
+          "end": "2026-02-12T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 2,
+          "start": "2026-02-12T00:00:00",
+          "end": "2026-03-08T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 3,
+          "start": "2026-03-08T00:00:00",
+          "end": "2026-04-01T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 4,
+          "start": "2026-04-01T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -246.91362761039062,
+          "realized_return_pct": -2.469136276103906,
+          "sign": "SPARSE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "0/1",
+        "quarters_with_data": 1,
+        "quarters_no_data": 3,
+        "verdict": "INSUFFICIENT_SAMPLE",
+        "reason": "only 4 closed trades (<30)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 2329,
+        "trading_GAP": 0,
+        "trading_STALE": 0,
+        "operational_OK": 99,
+        "operational_GAP": 2230
+      }
+    },
+    {
+      "threshold": 4.0,
+      "label": "step7_sweep_97d_t4",
+      "elapsed_sec": 272.0163321495056,
+      "n_trades_total": 4,
+      "n_trades_closed": 4,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -2.469136276103906,
+      "mtm_return_pct": -2.4691362761039115,
+      "sharpe_annualized": -1.8267666204344153,
+      "max_drawdown_pct": 3.8814450015356146,
+      "edge_verdict_backtest": "insufficient_sample",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2026-01-19T00:00:00",
+          "end": "2026-02-12T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 2,
+          "start": "2026-02-12T00:00:00",
+          "end": "2026-03-08T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 3,
+          "start": "2026-03-08T00:00:00",
+          "end": "2026-04-01T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 4,
+          "start": "2026-04-01T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -246.91362761039062,
+          "realized_return_pct": -2.469136276103906,
+          "sign": "SPARSE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "0/1",
+        "quarters_with_data": 1,
+        "quarters_no_data": 3,
+        "verdict": "INSUFFICIENT_SAMPLE",
+        "reason": "only 4 closed trades (<30)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 2329,
+        "trading_GAP": 0,
+        "trading_STALE": 0,
+        "operational_OK": 99,
+        "operational_GAP": 2230
+      }
+    },
+    {
+      "threshold": 6.0,
+      "label": "step7_sweep_97d_t6",
+      "elapsed_sec": 274.0060365200043,
+      "n_trades_total": 4,
+      "n_trades_closed": 4,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -2.469136276103906,
+      "mtm_return_pct": -2.4691362761039115,
+      "sharpe_annualized": -1.8267666204344153,
+      "max_drawdown_pct": 3.8814450015356146,
+      "edge_verdict_backtest": "insufficient_sample",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2026-01-19T00:00:00",
+          "end": "2026-02-12T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 2,
+          "start": "2026-02-12T00:00:00",
+          "end": "2026-03-08T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 3,
+          "start": "2026-03-08T00:00:00",
+          "end": "2026-04-01T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 4,
+          "start": "2026-04-01T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -246.91362761039062,
+          "realized_return_pct": -2.469136276103906,
+          "sign": "SPARSE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "0/1",
+        "quarters_with_data": 1,
+        "quarters_no_data": 3,
+        "verdict": "INSUFFICIENT_SAMPLE",
+        "reason": "only 4 closed trades (<30)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 2329,
+        "trading_GAP": 0,
+        "trading_STALE": 0,
+        "operational_OK": 99,
+        "operational_GAP": 2230
+      }
+    },
+    {
+      "threshold": 8.0,
+      "label": "step7_sweep_97d_t8",
+      "elapsed_sec": 276.0042266845703,
+      "n_trades_total": 4,
+      "n_trades_closed": 4,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -2.469136276103906,
+      "mtm_return_pct": -2.4691362761039115,
+      "sharpe_annualized": -1.8267666204344153,
+      "max_drawdown_pct": 3.8814450015356146,
+      "edge_verdict_backtest": "insufficient_sample",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2026-01-19T00:00:00",
+          "end": "2026-02-12T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 2,
+          "start": "2026-02-12T00:00:00",
+          "end": "2026-03-08T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 3,
+          "start": "2026-03-08T00:00:00",
+          "end": "2026-04-01T00:00:00",
+          "n_trades_closed": 0,
+          "realized_pnl": 0.0,
+          "realized_return_pct": 0.0,
+          "sign": "NO_DATA"
+        },
+        {
+          "quarter": 4,
+          "start": "2026-04-01T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -246.91362761039062,
+          "realized_return_pct": -2.469136276103906,
+          "sign": "SPARSE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "0/1",
+        "quarters_with_data": 1,
+        "quarters_no_data": 3,
+        "verdict": "INSUFFICIENT_SAMPLE",
+        "reason": "only 4 closed trades (<30)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 2329,
+        "trading_GAP": 0,
+        "trading_STALE": 0,
+        "operational_OK": 99,
+        "operational_GAP": 2230
+      }
+    }
+  ]
+}

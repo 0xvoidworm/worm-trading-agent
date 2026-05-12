@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-04-25T20:18:28.106228+00:00",
+  "action": "SKIP",
+  "reason": "health=GAP",
+  "trade_id": 6,
+  "signal_id": null,
+  "confidence": null
+}

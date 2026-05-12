@@ -1,0 +1,474 @@
+{
+  "label": "step15b_funding_flip_3y",
+  "step": "14B",
+  "start": "2023-04-27T00:00:00",
+  "end": "2026-04-26T00:00:00",
+  "window_days": 1095,
+  "quarters": 12,
+  "common_overrides": {
+    "advisor": {
+      "detector_whitelist": [
+        "FUNDING_FLIP"
+      ],
+      "funding_flip": {
+        "band_min": 0.0001,
+        "band_max": 0.0003
+      }
+    }
+  },
+  "variants": [
+    {
+      "name": "V1",
+      "description": "Existing exits (SL=5% TP=5% max_hold=72h regime_flip_t=6.0)",
+      "exits_overrides": {}
+    },
+    {
+      "name": "V2",
+      "description": "max_hold=24h (regime_flip enabled t=6.0)",
+      "exits_overrides": {
+        "max_hold_hours": 24
+      }
+    },
+    {
+      "name": "V3",
+      "description": "max_hold=72h, regime_flip DISABLED (t=999 \u2248 off)",
+      "exits_overrides": {
+        "regime_flip_t_threshold": 999.0
+      }
+    }
+  ],
+  "min_quarter_trades": 8,
+  "insufficient_total_threshold": 30,
+  "runs": [
+    {
+      "variant": "V1",
+      "description": "Existing exits (SL=5% TP=5% max_hold=72h regime_flip_t=6.0)",
+      "label": "step15b_funding_flip_3y_V1",
+      "elapsed_sec": 2342.447854280472,
+      "n_trades_total": 56,
+      "n_trades_closed": 56,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -11.53271886048717,
+      "mtm_return_pct": -11.532718860487169,
+      "sharpe_annualized": -1.0328013212392342,
+      "max_drawdown_pct": 13.077619801217487,
+      "bnh_btc_return_pct": 168.57078108632658,
+      "alpha_realized_vs_bnh": -180.10349994681374,
+      "alpha_mtm_vs_bnh": -180.10349994681374,
+      "edge_verdict_backtest": "negative",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2023-04-27T00:00:00",
+          "end": "2023-07-27T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -59.19278609981386,
+          "realized_return_pct": -0.5919278609981385,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 2,
+          "start": "2023-07-27T00:00:00",
+          "end": "2023-10-26T00:00:00",
+          "n_trades_closed": 8,
+          "realized_pnl": -115.0827239884284,
+          "realized_return_pct": -1.150827239884284,
+          "sign": "NEGATIVE"
+        },
+        {
+          "quarter": 3,
+          "start": "2023-10-26T00:00:00",
+          "end": "2024-01-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -161.68706117711906,
+          "realized_return_pct": -1.6168706117711908,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 4,
+          "start": "2024-01-25T00:00:00",
+          "end": "2024-04-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -59.39221548035543,
+          "realized_return_pct": -0.5939221548035543,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 5,
+          "start": "2024-04-25T00:00:00",
+          "end": "2024-07-25T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -244.22479013106008,
+          "realized_return_pct": -2.4422479013106004,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 6,
+          "start": "2024-07-25T00:00:00",
+          "end": "2024-10-24T00:00:00",
+          "n_trades_closed": 5,
+          "realized_pnl": -156.2825048467383,
+          "realized_return_pct": -1.5628250484673831,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 7,
+          "start": "2024-10-24T00:00:00",
+          "end": "2025-01-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -4.624934717522795,
+          "realized_return_pct": -0.046249347175227946,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 8,
+          "start": "2025-01-23T00:00:00",
+          "end": "2025-04-24T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -265.5918841993725,
+          "realized_return_pct": -2.6559188419937247,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 9,
+          "start": "2025-04-24T00:00:00",
+          "end": "2025-07-24T00:00:00",
+          "n_trades_closed": 5,
+          "realized_pnl": -89.62150134364991,
+          "realized_return_pct": -0.8962150134364991,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 10,
+          "start": "2025-07-24T00:00:00",
+          "end": "2025-10-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": 3.7742197384084335,
+          "realized_return_pct": 0.03774219738408433,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 11,
+          "start": "2025-10-23T00:00:00",
+          "end": "2026-01-22T00:00:00",
+          "n_trades_closed": 11,
+          "realized_pnl": 326.6893901454264,
+          "realized_return_pct": 3.2668939014542637,
+          "sign": "POSITIVE"
+        },
+        {
+          "quarter": 12,
+          "start": "2026-01-22T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 8,
+          "realized_pnl": -328.03509394849164,
+          "realized_return_pct": -3.280350939484916,
+          "sign": "NEGATIVE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "1/12",
+        "quarters_with_data": 12,
+        "quarters_no_data": 0,
+        "verdict": "INCONSISTENT",
+        "reason": "quarter(s) [1, 3, 4, 5, 6, 7, 8, 9, 10] have <8 trades (sparse, unreliable)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 26269,
+        "trading_GAP": 0,
+        "trading_STALE": 12,
+        "operational_OK": 99,
+        "operational_GAP": 26182
+      },
+      "exits_overrides": {}
+    },
+    {
+      "variant": "V2",
+      "description": "max_hold=24h (regime_flip enabled t=6.0)",
+      "label": "step15b_funding_flip_3y_V2",
+      "elapsed_sec": 2225.362390756607,
+      "n_trades_total": 57,
+      "n_trades_closed": 57,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -6.325453281635378,
+      "mtm_return_pct": -6.325453281635385,
+      "sharpe_annualized": -0.6946353314057628,
+      "max_drawdown_pct": 10.100589595643637,
+      "bnh_btc_return_pct": 168.57078108632658,
+      "alpha_realized_vs_bnh": -174.89623436796197,
+      "alpha_mtm_vs_bnh": -174.89623436796197,
+      "edge_verdict_backtest": "negative",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2023-04-27T00:00:00",
+          "end": "2023-07-27T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -3.605731131189861,
+          "realized_return_pct": -0.03605731131189861,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 2,
+          "start": "2023-07-27T00:00:00",
+          "end": "2023-10-26T00:00:00",
+          "n_trades_closed": 8,
+          "realized_pnl": -197.1080931967104,
+          "realized_return_pct": -1.9710809319671039,
+          "sign": "NEGATIVE"
+        },
+        {
+          "quarter": 3,
+          "start": "2023-10-26T00:00:00",
+          "end": "2024-01-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -161.25200426203037,
+          "realized_return_pct": -1.6125200426203037,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 4,
+          "start": "2024-01-25T00:00:00",
+          "end": "2024-04-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -47.301661209887094,
+          "realized_return_pct": -0.47301661209887097,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 5,
+          "start": "2024-04-25T00:00:00",
+          "end": "2024-07-25T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -156.95418721193602,
+          "realized_return_pct": -1.5695418721193601,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 6,
+          "start": "2024-07-25T00:00:00",
+          "end": "2024-10-24T00:00:00",
+          "n_trades_closed": 5,
+          "realized_pnl": -65.77856570191773,
+          "realized_return_pct": -0.6577856570191773,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 7,
+          "start": "2024-10-24T00:00:00",
+          "end": "2025-01-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": 64.51940956548826,
+          "realized_return_pct": 0.6451940956548826,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 8,
+          "start": "2025-01-23T00:00:00",
+          "end": "2025-04-24T00:00:00",
+          "n_trades_closed": 4,
+          "realized_pnl": -307.73461287421986,
+          "realized_return_pct": -3.0773461287421986,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 9,
+          "start": "2025-04-24T00:00:00",
+          "end": "2025-07-24T00:00:00",
+          "n_trades_closed": 5,
+          "realized_pnl": -14.365160610160329,
+          "realized_return_pct": -0.14365160610160327,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 10,
+          "start": "2025-07-24T00:00:00",
+          "end": "2025-10-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": 3.887796190410036,
+          "realized_return_pct": 0.03887796190410036,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 11,
+          "start": "2025-10-23T00:00:00",
+          "end": "2026-01-22T00:00:00",
+          "n_trades_closed": 11,
+          "realized_pnl": 475.4436749891536,
+          "realized_return_pct": 4.754436749891536,
+          "sign": "POSITIVE"
+        },
+        {
+          "quarter": 12,
+          "start": "2026-01-22T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 9,
+          "realized_pnl": -222.29619271053778,
+          "realized_return_pct": -2.222961927105378,
+          "sign": "NEGATIVE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "1/12",
+        "quarters_with_data": 12,
+        "quarters_no_data": 0,
+        "verdict": "INCONSISTENT",
+        "reason": "quarter(s) [1, 3, 4, 5, 6, 7, 8, 9, 10] have <8 trades (sparse, unreliable)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 26269,
+        "trading_GAP": 0,
+        "trading_STALE": 12,
+        "operational_OK": 99,
+        "operational_GAP": 26182
+      },
+      "exits_overrides": {
+        "max_hold_hours": 24
+      }
+    },
+    {
+      "variant": "V3",
+      "description": "max_hold=72h, regime_flip DISABLED (t=999 \u2248 off)",
+      "label": "step15b_funding_flip_3y_V3",
+      "elapsed_sec": 2282.7287459373474,
+      "n_trades_total": 56,
+      "n_trades_closed": 56,
+      "n_trades_open_at_end": 0,
+      "realized_return_pct": -13.65145386310464,
+      "mtm_return_pct": -13.651453863104635,
+      "sharpe_annualized": -1.1487090156950557,
+      "max_drawdown_pct": 13.959400452615544,
+      "bnh_btc_return_pct": 168.57078108632658,
+      "alpha_realized_vs_bnh": -182.22223494943123,
+      "alpha_mtm_vs_bnh": -182.2222349494312,
+      "edge_verdict_backtest": "negative",
+      "per_quarter": [
+        {
+          "quarter": 1,
+          "start": "2023-04-27T00:00:00",
+          "end": "2023-07-27T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -59.19278609981386,
+          "realized_return_pct": -0.5919278609981385,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 2,
+          "start": "2023-07-27T00:00:00",
+          "end": "2023-10-26T00:00:00",
+          "n_trades_closed": 8,
+          "realized_pnl": -217.58248904154814,
+          "realized_return_pct": -2.1758248904154813,
+          "sign": "NEGATIVE"
+        },
+        {
+          "quarter": 3,
+          "start": "2023-10-26T00:00:00",
+          "end": "2024-01-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -107.89416453577036,
+          "realized_return_pct": -1.0789416453577036,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 4,
+          "start": "2024-01-25T00:00:00",
+          "end": "2024-04-25T00:00:00",
+          "n_trades_closed": 2,
+          "realized_pnl": -73.95541515950518,
+          "realized_return_pct": -0.7395541515950518,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 5,
+          "start": "2024-04-25T00:00:00",
+          "end": "2024-07-25T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -245.89048578305136,
+          "realized_return_pct": -2.4589048578305137,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 6,
+          "start": "2024-07-25T00:00:00",
+          "end": "2024-10-24T00:00:00",
+          "n_trades_closed": 5,
+          "realized_pnl": -155.1983275234963,
+          "realized_return_pct": -1.551983275234963,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 7,
+          "start": "2024-10-24T00:00:00",
+          "end": "2025-01-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -12.560203707062986,
+          "realized_return_pct": -0.12560203707062986,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 8,
+          "start": "2025-01-23T00:00:00",
+          "end": "2025-04-24T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": -223.91158438953215,
+          "realized_return_pct": -2.2391158438953216,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 9,
+          "start": "2025-04-24T00:00:00",
+          "end": "2025-07-24T00:00:00",
+          "n_trades_closed": 6,
+          "realized_pnl": -182.81803996262002,
+          "realized_return_pct": -1.8281803996262003,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 10,
+          "start": "2025-07-24T00:00:00",
+          "end": "2025-10-23T00:00:00",
+          "n_trades_closed": 3,
+          "realized_pnl": 76.037470583681,
+          "realized_return_pct": 0.76037470583681,
+          "sign": "SPARSE"
+        },
+        {
+          "quarter": 11,
+          "start": "2025-10-23T00:00:00",
+          "end": "2026-01-22T00:00:00",
+          "n_trades_closed": 11,
+          "realized_pnl": 263.5573678977026,
+          "realized_return_pct": 2.635573678977026,
+          "sign": "POSITIVE"
+        },
+        {
+          "quarter": 12,
+          "start": "2026-01-22T00:00:00",
+          "end": "2026-04-26T00:00:00",
+          "n_trades_closed": 8,
+          "realized_pnl": -425.7367285894475,
+          "realized_return_pct": -4.2573672858944756,
+          "sign": "NEGATIVE"
+        }
+      ],
+      "classification": {
+        "sign_consistency": "1/12",
+        "quarters_with_data": 12,
+        "quarters_no_data": 0,
+        "verdict": "INCONSISTENT",
+        "reason": "quarter(s) [1, 3, 4, 5, 6, 7, 8, 9, 10] have <8 trades (sparse, unreliable)"
+      },
+      "cycles_health_breakdown": {
+        "trading_OK": 26269,
+        "trading_GAP": 0,
+        "trading_STALE": 12,
+        "operational_OK": 99,
+        "operational_GAP": 26182
+      },
+      "exits_overrides": {
+        "regime_flip_t_threshold": 999.0
+      }
+    }
+  ]
+}

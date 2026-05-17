@@ -67,7 +67,7 @@ def test_status_ok_when_data_fresh():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "t.duckdb"
         with Storage(db) as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 24, now))
             # funding baru (< 12h old)
             s.upsert_funding([{
@@ -101,7 +101,7 @@ def test_status_stale_when_ohlcv_old():
         db = Path(tmp) / "t.duckdb"
         with Storage(db) as s:
             # data 5 jam lalu → > 2h threshold
-            end = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(hours=5)
+            end = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(hours=5)
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 10, end))
             rep = run_health_check(s, _CFG)
             assert rep["status"] == "STALE"
@@ -114,7 +114,7 @@ def test_status_gap_when_ohlcv_has_hole():
         db = Path(tmp) / "t.duckdb"
         with Storage(db) as s:
             # bar berakhir di now → tidak stale, tapi ada 1 gap 5h di tengah
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_gappy_ohlcv("BTC/USDT", now))
             # funding fresh → bukan penyebab GAP
             s.upsert_funding([{
@@ -146,7 +146,7 @@ def test_status_gap_when_feed_dead():
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "t.duckdb"
         with Storage(db) as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 10, now))
             s.upsert_funding([{
                 "exchange": "bybit", "symbol": "BTC/USDT", "ts": now,

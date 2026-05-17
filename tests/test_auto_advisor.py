@@ -49,7 +49,7 @@ _CFG_MULTI = {
 
 def _seed_btc_with_signal(s: Storage, t_val: float) -> None:
     """Insert 30+ bars (untuk sizing) + 1 fresh REGIME_CHANGE signal t=t_val."""
-    base = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(hours=40)
+    base = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(hours=40)
     rows = []
     for i in range(40):
         rows.append({
@@ -102,7 +102,7 @@ def test_run_auto_advisor_custom_threshold_lets_lower_signal_through():
 
 def _seed_multi_pair_ohlcv(s: Storage, pairs: list[str]) -> pd.Timestamp:
     """Seed 40 bars × N pairs supaya semua punya entry_price + sizing valid."""
-    base = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(hours=40)
+    base = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(hours=40)
     rows = []
     for pair in pairs:
         for i in range(40):
@@ -136,7 +136,7 @@ def _inject_regime_signal(
     age_hours: float = 0.5,
 ) -> None:
     """Inject 1 fresh REGIME_CHANGE LONG signal."""
-    sig_ts = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(
+    sig_ts = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(
         hours=age_hours,
     )
     payload = f"from=ranging;to=trending_up;t={t_val:.2f}"
@@ -268,7 +268,7 @@ def _seed_btc_with_funding_flip(
     `curr_pct` and `prev_pct` are in PERCENT (already × 100), matching
     signal_log.detect_funding_events payload format `prev=X%;curr=Y%`.
     """
-    base = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(hours=40)
+    base = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(hours=40)
     rows = []
     for i in range(40):
         rows.append({
@@ -279,7 +279,7 @@ def _seed_btc_with_funding_flip(
         })
     s.upsert_ohlcv(rows)
 
-    sig_ts = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(
+    sig_ts = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(
         hours=age_hours,
     )
     payload = f"prev={prev_pct:.4f}%;curr={curr_pct:.4f}%"

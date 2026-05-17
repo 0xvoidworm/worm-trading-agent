@@ -55,7 +55,7 @@ def _seed_all_feeds_live(s: Storage, now_dt: datetime) -> None:
 def test_split_returns_two_dimensions_and_combined():
     with tempfile.TemporaryDirectory() as tmp:
         with Storage(Path(tmp) / "t.duckdb") as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             now_dt = datetime.now(timezone.utc)
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 24, now))
             s.upsert_funding([{
@@ -85,7 +85,7 @@ def test_trading_ok_independent_of_dead_feeds():
     """
     with tempfile.TemporaryDirectory() as tmp:
         with Storage(Path(tmp) / "t.duckdb") as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 24, now))
             s.upsert_funding([{
                 "exchange": "bybit", "symbol": "BTC/USDT",
@@ -104,7 +104,7 @@ def test_trading_ok_independent_of_dead_feeds():
 def test_operational_gap_when_feeds_dead_but_trading_ok():
     with tempfile.TemporaryDirectory() as tmp:
         with Storage(Path(tmp) / "t.duckdb") as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 24, now))
             # funding stale (>12h) → operational GAP
             s.upsert_funding([{
@@ -125,7 +125,7 @@ def test_trading_stale_propagates_to_combined():
     with tempfile.TemporaryDirectory() as tmp:
         with Storage(Path(tmp) / "t.duckdb") as s:
             # ohlcv > 2h old → trading STALE
-            end = pd.Timestamp.utcnow().tz_localize(None).floor("h") - pd.Timedelta(hours=5)
+            end = pd.Timestamp.now("UTC").tz_localize(None).floor("h") - pd.Timedelta(hours=5)
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 10, end))
 
             rep = run_health_check_split(s, _CFG)
@@ -140,7 +140,7 @@ def test_legacy_run_health_check_shape_unchanged():
     """
     with tempfile.TemporaryDirectory() as tmp:
         with Storage(Path(tmp) / "t.duckdb") as s:
-            now = pd.Timestamp.utcnow().tz_localize(None).floor("h")
+            now = pd.Timestamp.now("UTC").tz_localize(None).floor("h")
             s.upsert_ohlcv(_fresh_ohlcv("BTC/USDT", 10, now))
             rep = run_health_check(s, _CFG)
             for k in ("status", "generated_at", "exchange", "timeframe",

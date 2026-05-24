@@ -11,6 +11,17 @@ data/market.duckdb.*
 data/*.log
 data/*.log.bg
 data/*.killswitch
+# Runtime state files (per-session, NOT code)
+data/*.latest.json
+data/*.state.json
+data/protection.json
+data/regime_hmm.pkl
+data/daemon.heartbeat
+data/daemon.state.yaml
+data/verdict_*.json
+data/advisor.context.json
+data/advisor.latest.json
+data/TEST_ARTIFACTS.md
 .env
 .env.*
 *.session

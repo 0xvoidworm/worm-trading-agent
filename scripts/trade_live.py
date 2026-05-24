@@ -252,6 +252,70 @@ def cmd_reset_daily(args, storage: Storage, cfg: dict) -> int:
     return 0
 
 
+def cmd_protect(args, storage: Storage, cfg: dict) -> int:
+    """Place protective OCO (TP + SL) on exchange for a trade."""
+    from data_pipe.protection import place_protective_oco
+
+    broker = make_broker(live=args.live)
+    if not broker.is_live:
+        print("[protect] dry-run mode — OCO cannot be simulated meaningfully. Use --live to place real OCO.")
+        return 1
+
+    row = storage._conn.execute(
+        "SELECT id, pair, entry_price, size, direction, status FROM trade_journal WHERE id=?",
+        [int(args.trade_id)],
+    ).fetchone()
+    if row is None:
+        print(f"[protect] trade #{args.trade_id} not found")
+        return 1
+    tid, pair, entry_price, size, direction, status = row
+    if status != "OPEN":
+        print(f"[protect] trade #{tid} status={status} (must be OPEN)")
+        return 1
+    if direction != "LONG":
+        print(f"[protect] trade #{tid} direction={direction} (only LONG supported)")
+        return 1
+
+    print(f"[protect] trade #{tid} {pair} entry=${entry_price:.6g} size={size:.6g}")
+    print(f"[protect] target TP +{args.tp:.1f}% (${entry_price*(1+args.tp/100):.6g})")
+    print(f"[protect] target SL -{args.sl:.1f}% (${entry_price*(1-args.sl/100):.6g})")
+    print("[protect] *** REAL OCO will be placed, asset locked until fill or cancel ***")
+
+    result = place_protective_oco(
+        broker=broker, trade_id=int(tid), symbol=str(pair),
+        quantity=float(size), entry_price=float(entry_price),
+        tp_pct=float(args.tp), sl_pct=float(args.sl),
+    )
+    if not result.success:
+        print(f"[protect] FAILED: {result.error}")
+        return 1
+    print(f"[protect] OK order_list_id={result.order_list_id} client_id={result.list_client_order_id}")
+    print(f"          TP=${result.tp_price:.6g}  SL_stop=${result.sl_stop:.6g}  SL_limit=${result.sl_limit:.6g}")
+    return 0
+
+
+def cmd_protect_cancel(args, storage: Storage, cfg: dict) -> int:
+    """Cancel protective OCO for a trade."""
+    from data_pipe.protection import cancel_protection
+    broker = make_broker(live=args.live)
+    if not broker.is_live:
+        print("[protect-cancel] dry-run can't cancel real OCO. Use --live.")
+        return 1
+    result = cancel_protection(broker, int(args.trade_id))
+    print(json.dumps(result, indent=2, default=str))
+    return 0 if result.get("success") else 1
+
+
+def cmd_protect_status(args, storage: Storage, cfg: dict) -> int:
+    """Show protection state for all trades or one trade_id."""
+    from data_pipe.protection import get_protection_status
+    broker = make_broker(live=args.live)
+    tid = int(args.trade_id) if args.trade_id else None
+    result = get_protection_status(broker, tid)
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
 def cmd_reset_permanent(args, storage: Storage, cfg: dict) -> int:
     print("[reset-permanent] WARNING: this lifts the cumulative drawdown stop.")
     print("                  ensure you've done post-mortem + top-up before reset.")
@@ -301,6 +365,23 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("panic", help="close ALL open LONG positions immediately")
     s.add_argument("--live", action="store_true", help="place real orders (default: dry-run)")
     s.set_defaults(func=cmd_panic)
+
+    s = sub.add_parser("protect", help="place protective OCO (TP+SL) on exchange for open trade")
+    s.add_argument("trade_id", type=int)
+    s.add_argument("--tp", type=float, default=5.0, help="take-profit pct above entry (default 5)")
+    s.add_argument("--sl", type=float, default=5.0, help="stop-loss pct below entry (default 5)")
+    s.add_argument("--live", action="store_true", help="place real OCO (required)")
+    s.set_defaults(func=cmd_protect)
+
+    s = sub.add_parser("protect-cancel", help="cancel protective OCO for trade")
+    s.add_argument("trade_id", type=int)
+    s.add_argument("--live", action="store_true", help="real cancel (required)")
+    s.set_defaults(func=cmd_protect_cancel)
+
+    s = sub.add_parser("protect-status", help="show protection state for trades")
+    s.add_argument("trade_id", type=int, nargs="?", help="optional, default all")
+    s.add_argument("--live", action="store_true", help="query exchange for fresh state")
+    s.set_defaults(func=cmd_protect_status)
 
     s = sub.add_parser("reset-daily", help="remove data/risk.killswitch (manual reset)")
     s.set_defaults(func=cmd_reset_daily)

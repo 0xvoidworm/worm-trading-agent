@@ -128,8 +128,15 @@ def execute_live_open(
     symbol: str,
     usdt_amount: float,
     thesis: str = "",
+    auto_protect: bool = False,
+    tp_pct: Optional[float] = None,
+    sl_pct: Optional[float] = None,
 ) -> LiveExecResult:
-    """Open LONG spot position. usdt_amount = USDT budget to spend."""
+    """Open LONG spot position. usdt_amount = USDT budget to spend.
+
+    If auto_protect=True and broker.is_live=True, immediately place OCO
+    SL+TP after BUY fill. Default tp/sl pct from cfg.exits.
+    """
     err = _check_entry_gates(storage, cfg, data_dir, symbol, usdt_amount)
     if err:
         r = LiveExecResult(
@@ -162,18 +169,72 @@ def execute_live_open(
         signal_id=None,
     )
 
+    reason = (
+        f"BUY {pair} filled {order.filled_amount:.8g} @ "
+        f"{order.avg_fill_price:.6g} = {order.notional_usdt:.4f} USDT"
+    )
+
+    # Auto-protect after fill (live broker only; dry-run can't place OCO)
+    protection_info = None
+    if auto_protect and broker.is_live and order.success:
+        try:
+            from .protection import place_protective_oco
+            exits = cfg.get("exits") or {}
+            tp = tp_pct if tp_pct is not None else float(exits.get("take_profit_pct", 5.0))
+            sl = sl_pct if sl_pct is not None else float(exits.get("stop_loss_pct", 5.0))
+            prot = place_protective_oco(
+                broker=broker, trade_id=int(trade_id),
+                symbol=pair, quantity=order.filled_amount,
+                entry_price=order.avg_fill_price,
+                tp_pct=tp, sl_pct=sl,
+            )
+            if prot.success:
+                protection_info = {
+                    "order_list_id": prot.order_list_id,
+                    "tp_price": prot.tp_price,
+                    "sl_stop": prot.sl_stop,
+                    "sl_limit": prot.sl_limit,
+                    "qty_protected": prot.quantity,
+                }
+                reason += f" | PROTECTED OCO {prot.order_list_id} TP=${prot.tp_price:.6g} SL=${prot.sl_stop:.6g}"
+            else:
+                reason += f" | auto-protect FAILED: {prot.error}"
+        except Exception as e:
+            reason += f" | auto-protect EXC: {type(e).__name__}: {e}"
+
     r = LiveExecResult(
         action="OPEN",
-        reason=(
-            f"BUY {pair} filled {order.filled_amount:.8g} @ "
-            f"{order.avg_fill_price:.6g} = {order.notional_usdt:.4f} USDT"
-        ),
+        reason=reason,
         trade_id=int(trade_id),
         symbol=pair,
         order=_order_dict(order),
         dry_run=order.dry_run,
     )
+    if protection_info:
+        # Attach protection summary to result.order dict
+        if r.order is None:
+            r.order = {}
+        r.order["protection"] = protection_info
     _persist(r, data_dir)
+
+    # Fire Telegram (silent no-op if not configured)
+    try:
+        from .telegram import notify_trade
+        notify_trade(
+            action="OPEN", symbol=pair,
+            details={
+                "trade_id": trade_id,
+                "filled": f"{order.filled_amount:.8g}",
+                "price": f"{order.avg_fill_price:.6g}",
+                "notional": f"{order.notional_usdt:.4f} USDT",
+                "thesis": thesis[:80] if thesis else "(none)",
+                "protected": "YES" if protection_info else "NO",
+            },
+            urgent=True,
+        )
+    except Exception:
+        pass
+
     return r
 
 

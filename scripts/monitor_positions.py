@@ -37,6 +37,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from data_pipe.brokers import BinanceSpotBroker  # noqa: E402
+from data_pipe.telegram import notify_trade  # noqa: E402
 
 DB_PATH = REPO_ROOT / "data" / "market.duckdb"
 CFG_PATH = REPO_ROOT / "config" / "pairs.yaml"
@@ -167,6 +168,20 @@ def cycle(broker: BinanceSpotBroker, cfg: dict, state: dict) -> dict:
                 f"[{now_s}] *** ALERT #{pos['id']} {pos['pair']} {signal}: "
                 f"pct={pct:+.2f}% tp={tp_pct}% sl=-{sl_pct}% hold>={max_hold_h}h "
                 f"-- consider: python scripts/trade_live.py close {pos['id']} --live ***"
+            )
+            # Fire Telegram alert (silent no-op if not configured)
+            notify_trade(
+                action=signal, symbol=pos["pair"],
+                details={
+                    "trade_id": pos["id"],
+                    "entry": f"{entry:.6g}",
+                    "now": f"{price:.6g}",
+                    "pct": f"{pct:+.2f}%",
+                    "unrealized": f"{unrealized:+.4f} USDT",
+                    "age_h": f"{age_h:.1f}",
+                    "action": f"close {pos['id']} --live OR check OCO",
+                },
+                urgent=True,
             )
 
         state[key] = {

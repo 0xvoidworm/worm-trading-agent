@@ -197,6 +197,8 @@ def cmd_open(args, storage: Storage, cfg: dict) -> int:
     print(f"[open] mode={'LIVE' if broker.is_live else 'DRY'} symbol={args.symbol} usdt={args.usdt}")
     if broker.is_live:
         print("[open] *** REAL MONEY — order will be placed ***")
+    if args.protect and broker.is_live:
+        print(f"[open] auto-protect ENABLED: OCO TP/SL akan dipasang setelah fill")
     result = execute_live_open(
         storage=storage,
         cfg=cfg,
@@ -205,6 +207,9 @@ def cmd_open(args, storage: Storage, cfg: dict) -> int:
         symbol=args.symbol,
         usdt_amount=float(args.usdt),
         thesis=args.thesis or "manual cli open",
+        auto_protect=bool(args.protect),
+        tp_pct=args.tp,
+        sl_pct=args.sl,
     )
     print(json.dumps(result.to_dict(), indent=2, default=str))
     return 0 if result.action in ("OPEN",) else 1
@@ -355,6 +360,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("usdt", type=float, help="USDT amount to spend")
     s.add_argument("--thesis", default="", help="rationale (logged to trade_journal)")
     s.add_argument("--live", action="store_true", help="place real order (default: dry-run)")
+    s.add_argument("--protect", action="store_true",
+                   help="auto-place OCO (TP+SL) immediately after fill (live only)")
+    s.add_argument("--tp", type=float, default=None, help="take-profit pct (default cfg.exits)")
+    s.add_argument("--sl", type=float, default=None, help="stop-loss pct (default cfg.exits)")
     s.set_defaults(func=cmd_open)
 
     s = sub.add_parser("close", help="close spot LONG by trade_id via market SELL")

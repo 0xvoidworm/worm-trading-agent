@@ -41,18 +41,27 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("XRP/USDT", "LTC/USDT"),   # Payment vs Payment
 ]
 
-# Per-pair backtest verdict (from scripts/backtest_spot_pairs.py 2026-05-24,
-# z=2.0 entry, z=0 exit, hold 14d, SL -10%, fee 0.1%/side, 3y 1h OHLCV).
-# Use to filter signals: only act on VALIDATED pairs in live trading.
+# Per-pair backtest verdict — REVISED 2026-05-24 to use RECENT YEAR
+# (walk-forward P3 = May 2025 → May 2026). Full-history verdict shown as comment.
+#
+# Walk-forward exposed that BNB/BTC's "STABLE_POSITIVE" full-history verdict
+# was driven by 2023-2024; in last 12mo it flipped STABLE_NEGATIVE (31% wr,
+# -33% compound). AVAX/SOL also decaying (P1 +261%, P2 +62%, P3 -7%) but
+# barely positive recently.
+#
+# Lesson: trust RECENT (last 12mo) verdict over full-history average.
 PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
-    ("ETH/USDT", "BTC/USDT"):  "INCONSISTENT",       # 44% wr, -8% compound
-    ("SOL/USDT", "ETH/USDT"):  "INCONSISTENT",       # 48% wr, -4% compound
-    ("AVAX/USDT", "SOL/USDT"): "MARGINAL_POSITIVE",  # 52% wr, +311% compound (robust @z=2.5 hold=7d: +105%)
-    ("ARB/USDT", "OP/USDT"):   "STABLE_NEGATIVE",    # 33% wr, -77% compound — AVOID
-    ("BNB/USDT", "BTC/USDT"):  "STABLE_POSITIVE",    # 56% wr, +20% compound
+    ("ETH/USDT", "BTC/USDT"):  "INCONSISTENT",       # full 44% wr -8%, no clear edge
+    ("SOL/USDT", "ETH/USDT"):  "INCONSISTENT",       # full 48% wr -4%
+    ("AVAX/USDT", "SOL/USDT"): "MARGINAL_POSITIVE",  # full 52% +312%, recent 52% +0.13% avg (decaying but still wins>losses)
+    ("ARB/USDT", "OP/USDT"):   "STABLE_NEGATIVE",    # full 33% wr -77% — AVOID
+    ("BNB/USDT", "BTC/USDT"):  "RECENTLY_BROKEN",    # full 56% +20%, recent 31% wr -33% — EDGE DIED 2025-2026
     ("XRP/USDT", "LTC/USDT"):  "NO_SIGNALS",         # insufficient bars
 }
 
+# Only "STABLE_POSITIVE" and "MARGINAL_POSITIVE" count as actionable.
+# "RECENTLY_BROKEN" = backtest claimed edge but walk-forward exposed decay.
+# "STABLE_NEGATIVE" = anti-edge, AVOID signal.
 VALIDATED_VERDICTS = {"STABLE_POSITIVE", "MARGINAL_POSITIVE"}
 
 

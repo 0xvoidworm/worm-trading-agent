@@ -251,6 +251,23 @@ def _render_md(results: list[dict], params: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _walk_forward_periods(merged: pd.DataFrame, n_periods: int) -> list[tuple]:
+    """Split merged df into n equal time periods. Returns [(label, sub_df), ...]."""
+    if n_periods <= 1:
+        return [("full", merged)]
+    chunk = len(merged) // n_periods
+    out = []
+    for i in range(n_periods):
+        start = i * chunk
+        end = (i + 1) * chunk if i < n_periods - 1 else len(merged)
+        sub = merged.iloc[start:end]
+        first_ts = sub["ts"].iloc[0] if len(sub) > 0 else "?"
+        last_ts = sub["ts"].iloc[-1] if len(sub) > 0 else "?"
+        label = f"P{i+1}({first_ts}→{last_ts})"
+        out.append((label, sub))
+    return out
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--lookback", type=int, default=DEFAULT_LOOKBACK_BARS)
@@ -261,6 +278,7 @@ def main() -> int:
     p.add_argument("--fee", type=float, default=DEFAULT_FEE_PCT_SIDE, help="fee pct per side")
     p.add_argument("--pair", default=None, help="single pair 'A/USDT,B/USDT'")
     p.add_argument("--out", default=None, help="output md path (default auto)")
+    p.add_argument("--periods", type=int, default=1, help="walk-forward split (default 1 = full history)")
     args = p.parse_args()
 
     if args.pair:
@@ -276,13 +294,26 @@ def main() -> int:
     try:
         for pa, pb in pairs:
             merged = _fetch_pair_ohlcv(storage._conn, pa, pb)
-            r = _backtest_pair(
-                merged, pa, pb,
-                lookback=args.lookback, z_entry=args.z, z_exit=args.z_exit,
-                max_hold_h=max_hold_h, sl_pct=args.sl, fee_pct_side=args.fee,
-            )
-            print(f"[backtest] {pa} / {pb}: {r.get('n_trades', 0)} trades, verdict={_verdict(r)}")
-            results.append(r)
+            if args.periods > 1:
+                # Walk-forward: split history into N periods, backtest each
+                for label, sub in _walk_forward_periods(merged, args.periods):
+                    r = _backtest_pair(
+                        sub, pa, pb,
+                        lookback=args.lookback, z_entry=args.z, z_exit=args.z_exit,
+                        max_hold_h=max_hold_h, sl_pct=args.sl, fee_pct_side=args.fee,
+                    )
+                    r["period_label"] = label
+                    r["pair"] = f"{pa}/{pb} [{label}]"
+                    print(f"[backtest] {pa}/{pb} {label}: {r.get('n_trades', 0)} trades, verdict={_verdict(r)}")
+                    results.append(r)
+            else:
+                r = _backtest_pair(
+                    merged, pa, pb,
+                    lookback=args.lookback, z_entry=args.z, z_exit=args.z_exit,
+                    max_hold_h=max_hold_h, sl_pct=args.sl, fee_pct_side=args.fee,
+                )
+                print(f"[backtest] {pa} / {pb}: {r.get('n_trades', 0)} trades, verdict={_verdict(r)}")
+                results.append(r)
     finally:
         storage.close()
 

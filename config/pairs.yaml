@@ -46,7 +46,10 @@ portfolio:
   daily_loss_warn_pct: 8.0        # daily_pnl_pct ≤ -ini → emit RISK_WARN signal (~$4)
   daily_loss_killswitch_pct: 15.0 # daily_pnl_pct ≤ -ini → block ENTRY (manual reset, ~$7.5)
   permanent_floor_pct: 50.0       # equity_drawdown ≥ ini → STOP permanent (~$25)
-  max_trades_per_day: 3           # cap fee drag, force selective entries
+  max_trades_per_day: 4           # cap fee drag, force selective entries
+  # 2026-05-24: raised 3→4 untuk allow validated signal entry (NEAR/AVAX z=+3.76)
+  # setelah cap awal hit by smoke + recovery + first live trade. Future:
+  # consider reset baseline daily atau scale with conviction.
 
 # Auto-exit triggers untuk modul data_pipe.auto_exit.
 # Override default in code by editing values below. Semua opsional — kalau

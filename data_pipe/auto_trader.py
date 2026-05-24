@@ -205,17 +205,48 @@ def decide_actions(
         if close_dec:
             decisions.append(close_dec)
 
-    # ───── Step 2: OPEN candidates via ENSEMBLE scoring ─────
+    # ───── Step 2: OPEN candidates via ENSEMBLE + REGIME-GATED ─────
     # Aggregate signals across validated pairs by target symbol
     from .ensemble_signals import compute_ensemble_signals, rank_ensemble
+    from .regime_hmm import get_current_regime
+    from .spot_pairs import is_pair_allowed_in_regime
+
+    # Current BTC regime (cached HMM)
+    regime_snap = get_current_regime(storage, use_cached=True)
+    current_regime = regime_snap.regime if regime_snap else "UNKNOWN"
 
     ensembles = compute_ensemble_signals(storage, threshold=2.0)
     if not ensembles:
         if not decisions:
-            decisions.append(Decision(action="SKIP", reason="no validated signals + no z-reverts"))
+            decisions.append(Decision(
+                action="SKIP",
+                reason=f"no validated signals + no z-reverts (regime={current_regime})",
+            ))
         return decisions
 
-    ranked = rank_ensemble(ensembles)
+    # Filter ensembles: each supporting pair must allow current regime.
+    # If majority of supporting pairs allow → keep ensemble.
+    # If all supporting pairs disallow → skip target.
+    gated_ensembles = {}
+    for target, ens in ensembles.items():
+        if not ens.supporting_pairs:
+            continue
+        allowed_count = sum(
+            1 for sp in ens.supporting_pairs
+            if is_pair_allowed_in_regime(sp[0], sp[1], current_regime)
+        )
+        if allowed_count > 0 and allowed_count >= len(ens.supporting_pairs) / 2:
+            gated_ensembles[target] = ens
+
+    if not gated_ensembles:
+        decisions.append(Decision(
+            action="SKIP",
+            reason=f"all signals filtered by regime gate (regime={current_regime}, "
+                   f"{len(ensembles)} ensembles → 0 passing)",
+        ))
+        return decisions
+
+    ranked = rank_ensemble(gated_ensembles)
 
     # Account state for cap check
     state_account = get_account_state(storage, cfg)
@@ -291,13 +322,15 @@ def decide_actions(
             reason=(
                 f"ENSEMBLE n={top.n_supporting} (conflicts={top.n_conflicting}) "
                 f"target={target_symbol} eff_conviction={conviction:.2f} "
-                f"max_z={top.max_abs_z:.2f} sizing×{top.sizing_multiplier:.2f}, "
-                f"slot {n_open}/{max_concurrent}, trades {trade_cap['today']}/{trade_cap['cap']}"
+                f"max_z={top.max_abs_z:.2f} sizing×{top.sizing_multiplier:.2f} "
+                f"regime={current_regime}, slot {n_open}/{max_concurrent}, "
+                f"trades {trade_cap['today']}/{trade_cap['cap']}"
             ),
             signal_pair=pair, signal_z=z,
             target_symbol=target_symbol, target_usdt=usdt_per_position,
             conviction=conviction,
-            metadata={"ensemble": top.to_dict()},
+            metadata={"ensemble": top.to_dict(), "regime": current_regime,
+                      "regime_confidence": regime_snap.confidence if regime_snap else 0},
         ))
         return decisions
 

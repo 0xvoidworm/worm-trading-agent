@@ -135,6 +135,39 @@ def get_tp_sl_for_pair(pair_a: str, pair_b: str) -> dict[str, float]:
     return PAIR_TP_SL.get((pair_a, pair_b), dict(DEFAULT_TP_SL))
 
 
+# Per-pair allowed-regime gate from regime-conditional backtest 2026-05-24.
+# Only auto-trade when BTC HMM regime ∈ this set. Empty set = never trade.
+# Derived: include regime only if n_trades ≥ 5 AND avg_pct_net > 0.
+PAIR_REGIME_GATE: dict[tuple[str, str], set[str]] = {
+    # NEAR/AVAX (CPCV_ROBUST): BULL +5.4% avg, NEUTRAL +3.1%, BEAR -3.5% (avoid)
+    ("NEAR/USDT", "AVAX/USDT"): {"BULL", "NEUTRAL"},
+    # AVAX/SOL INVERTED: BULL +3.9%, BEAR +4.7% (small n), NEUTRAL -1.5% (AVOID)
+    ("AVAX/USDT", "SOL/USDT"):  {"BULL", "BEAR"},
+    # TRX/ETH NEUTRAL specialist: NEUTRAL +1.9% wr 70%, BULL marginal, BEAR -3.3%
+    ("TRX/USDT", "ETH/USDT"):   {"NEUTRAL"},
+    # DOGE/BTC BULL-only: BULL +0.6% (weak), others negative
+    ("DOGE/USDT", "BTC/USDT"):  {"BULL"},
+    # APT/SOL NEUTRAL-only: NEUTRAL +1.4%, BULL NEGATIVE -1.7%
+    ("APT/USDT", "SOL/USDT"):   {"NEUTRAL"},
+    # SUI/SOL BULL-only: BULL +5.6%, NEUTRAL -0.2%
+    ("SUI/USDT", "SOL/USDT"):   {"BULL"},
+    # TON/ETH borderline: BULL +0.6%, NEUTRAL -0.1%, all weak — pick BULL+NEUTRAL
+    ("TON/USDT", "ETH/USDT"):   {"BULL", "NEUTRAL"},
+}
+
+
+def is_pair_allowed_in_regime(pair_a: str, pair_b: str, regime: str) -> bool:
+    """Check if pair is allowed to auto-trade in current BTC regime.
+
+    Returns True if pair has no gate (e.g. unknown), default permissive.
+    Returns False if pair has gate AND regime not in allowed set.
+    """
+    gate = PAIR_REGIME_GATE.get((pair_a, pair_b))
+    if gate is None:
+        return True  # no gate = permissive default
+    return regime in gate
+
+
 def is_pair_validated(pair_a: str, pair_b: str) -> bool:
     """Return True if backtest verdict suggests historical edge."""
     return PAIR_BACKTEST_VERDICT.get((pair_a, pair_b), "UNKNOWN") in VALIDATED_VERDICTS

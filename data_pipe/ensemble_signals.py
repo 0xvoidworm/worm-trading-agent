@@ -31,10 +31,12 @@ from .spot_pairs import (
 
 # Conviction weights per verdict (mirror auto_trader)
 CONVICTION_BY_VERDICT = {
+    "CPCV_ROBUST": 10.0,       # NEW: only Lopez de Prado-rigor passing pairs
     "STABLE_POSITIVE": 8.0,
     "MARGINAL_POSITIVE": 6.0,
     "INCONSISTENT": 3.0,
     "RECENTLY_BROKEN": 2.0,
+    "OVERFIT_REJECTED": 0.0,   # NEW: CPCV exposed as noise
     "STABLE_NEGATIVE": 0.0,
     "NO_SIGNALS": 0.0,
 }

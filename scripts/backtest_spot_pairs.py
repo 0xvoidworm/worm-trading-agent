@@ -98,6 +98,8 @@ def _backtest_pair(
     in_trade = False
     entry_idx = None
     entry_side = None  # "BUY_A" or "BUY_B"
+    mfe_pct = 0.0      # max favorable excursion during current trade
+    mae_pct = 0.0      # max adverse excursion (negative number)
 
     fee_round_pct = 2 * fee_pct_side
 
@@ -110,10 +112,12 @@ def _backtest_pair(
                 in_trade = True
                 entry_idx = i
                 entry_side = "BUY_A"
+                mfe_pct = 0.0; mae_pct = 0.0
             elif merged.at[i, "fresh_above"]:
                 in_trade = True
                 entry_idx = i
                 entry_side = "BUY_B"
+                mfe_pct = 0.0; mae_pct = 0.0
         else:
             assert entry_idx is not None
             # Compute current %change for entered leg
@@ -124,6 +128,11 @@ def _backtest_pair(
                 entry_price = merged.at[entry_idx, "b"]
                 cur_price = merged.at[i, "b"]
             pct = (cur_price - entry_price) / entry_price * 100
+            # Track MFE/MAE intra-trade
+            if pct > mfe_pct:
+                mfe_pct = pct
+            if pct < mae_pct:
+                mae_pct = pct
             age_h = (i - entry_idx)  # 1h bars → hours
             exit_reason = None
             if entry_side == "BUY_A" and z >= z_exit:
@@ -149,10 +158,13 @@ def _backtest_pair(
                     "pnl_pct_net": float(pnl_pct_net),
                     "hold_h": int(age_h),
                     "exit_reason": exit_reason,
+                    "mfe_pct": float(mfe_pct),
+                    "mae_pct": float(mae_pct),
                 })
                 in_trade = False
                 entry_idx = None
                 entry_side = None
+                mfe_pct = 0.0; mae_pct = 0.0
 
     if not trades:
         return {"pair": f"{pair_a}/{pair_b}", "n_trades": 0, "notes": "no signals fired"}
@@ -171,6 +183,11 @@ def _backtest_pair(
         "worst_pct_net": float(df["pnl_pct_net"].min()),
         "total_pct_compound": float(((1 + df["pnl_pct_net"] / 100).prod() - 1) * 100),
         "median_hold_h": float(df["hold_h"].median()),
+        # MFE/MAE excursion stats — for asymmetric TP/SL design
+        "median_mfe_pct": float(df["mfe_pct"].median()),
+        "median_mae_pct": float(df["mae_pct"].median()),
+        "p75_mfe_pct": float(df["mfe_pct"].quantile(0.75)),
+        "p75_mae_pct": float(df["mae_pct"].quantile(0.25)),  # 25% = lower tail
         "by_side": df.groupby("side")["pnl_pct_net"].agg(["count", "mean"]).to_dict(),
         "by_exit": df.groupby("exit_reason")["pnl_pct_net"].agg(["count", "mean"]).to_dict(),
         "first_signal_ts": str(df["entry_ts"].iloc[0]),

@@ -64,16 +64,18 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
 #
 # CONVICTION = recent year only. Full history is suggestive but not decisive.
 PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
-    # ─────── Strong recent edge (P3 STABLE_POSITIVE) ───────
-    ("SUI/USDT", "SOL/USDT"):   "STABLE_POSITIVE",    # P3 67% wr +3.46% avg
-    ("NEAR/USDT", "AVAX/USDT"): "STABLE_POSITIVE",    # P1+P2+P3 all positive
-    ("TRX/USDT", "ETH/USDT"):   "STABLE_POSITIVE",    # P3 58% wr +0.61% (consistent P1+P2+P3)
-    # ─────── Recent positive (P3 MARGINAL_POSITIVE) ───────
-    ("AVAX/USDT", "SOL/USDT"):  "MARGINAL_POSITIVE",  # P3 52% +0.13%
-    ("SUI/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +1.72%
-    ("TON/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +0.95%
-    ("DOGE/USDT", "BTC/USDT"):  "MARGINAL_POSITIVE",  # P3 50% +0.99%
-    ("APT/USDT", "SOL/USDT"):   "MARGINAL_POSITIVE",  # P3 50% +0.34%
+    # ─────── CPCV ROBUST (Lopez de Prado audit 2026-05-24, PBO 10.5%) ───────
+    # Only pair surviving full statistical rigor: Sharpe>1, p<0.001, DSR>0.5, 91% positive folds
+    ("NEAR/USDT", "AVAX/USDT"): "CPCV_ROBUST",        # CPCV Sharpe=1.47 DSR=0.80 91% positive folds 496 trades
+    # ─────── MARGINAL (CPCV positive but DSR≈0 — survives single-test, fails multi-comparison) ───────
+    ("AVAX/USDT", "SOL/USDT"):  "MARGINAL_POSITIVE",  # CPCV Sharpe=0.90 62% pos 484 trades
+    ("DOGE/USDT", "BTC/USDT"):  "MARGINAL_POSITIVE",  # CPCV Sharpe=0.79 69% pos 392 trades
+    ("TRX/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # CPCV Sharpe=0.72 58% pos 458 trades
+    ("APT/USDT", "SOL/USDT"):   "MARGINAL_POSITIVE",  # CPCV Sharpe=0.51 58% pos 412 trades (p=0.08 borderline)
+    ("TON/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # CPCV Sharpe=0.40 62% pos 405 trades
+    ("SUI/USDT", "SOL/USDT"):   "MARGINAL_POSITIVE",  # CPCV Sharpe=0.16 high mean +3.78% but high variance (p=0.26)
+    # ─────── DEMOTED by CPCV (was MARGINAL_POSITIVE) ───────
+    ("SUI/USDT", "ETH/USDT"):   "INCONSISTENT",       # CPCV Sharpe=-0.07 NEG, 49% pos folds, p=0.60
     # ─────── Recently BROKEN ───────
     ("BNB/USDT", "BTC/USDT"):   "RECENTLY_BROKEN",    # P3 31% -2.31%
     # ─────── Inconsistent ───────
@@ -99,10 +101,38 @@ PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
     ("XRP/USDT", "LTC/USDT"):   "NO_SIGNALS",
 }
 
-# Only "STABLE_POSITIVE" and "MARGINAL_POSITIVE" count as actionable.
+# CPCV_ROBUST > STABLE_POSITIVE > MARGINAL_POSITIVE in conviction order.
+# Only these 3 count as actionable (auto-trade eligible).
 # "RECENTLY_BROKEN" = backtest claimed edge but walk-forward exposed decay.
 # "STABLE_NEGATIVE" = anti-edge, AVOID signal.
-VALIDATED_VERDICTS = {"STABLE_POSITIVE", "MARGINAL_POSITIVE"}
+# "OVERFIT_REJECTED" = CPCV PBO test exposed as noise.
+VALIDATED_VERDICTS = {"CPCV_ROBUST", "STABLE_POSITIVE", "MARGINAL_POSITIVE"}
+
+
+# Per-pair asymmetric TP/SL from MFE/MAE backtest analysis 2026-05-24.
+# Methodology: TP ≈ p75 MFE (capture upper-half winners),
+#              SL ≈ 2× median MAE (room before typical losers stop).
+# Capped within practical bounds [2%, 15%].
+PAIR_TP_SL: dict[tuple[str, str], dict[str, float]] = {
+    # CPCV_ROBUST tier — best edge, asymmetric R:R favoring upside
+    ("NEAR/USDT", "AVAX/USDT"): {"tp_pct": 12.0, "sl_pct": 6.0},   # MFE +11.2% MAE -4.0% → R:R 2.0:1
+    # MARGINAL_POSITIVE tier — pair-specific tuning
+    ("TRX/USDT", "ETH/USDT"):   {"tp_pct": 8.0,  "sl_pct": 4.0},   # MFE +4.6% MAE -2.4% → R:R 2.0:1 (tightest SL)
+    ("AVAX/USDT", "SOL/USDT"):  {"tp_pct": 12.0, "sl_pct": 10.0},  # MFE +7.3% MAE -6.4% → R:R 1.2:1
+    ("APT/USDT", "SOL/USDT"):   {"tp_pct": 14.0, "sl_pct": 10.0},  # MFE +8.8% MAE -7.0% → R:R 1.4:1
+    ("DOGE/USDT", "BTC/USDT"):  {"tp_pct": 10.0, "sl_pct": 6.0},   # MFE +4.4% MAE -4.3% → R:R 1.67:1
+    ("TON/USDT", "ETH/USDT"):   {"tp_pct": 10.0, "sl_pct": 8.0},   # MFE +5.5% MAE -5.3% → R:R 1.25:1
+    ("SUI/USDT", "SOL/USDT"):   {"tp_pct": 15.0, "sl_pct": 10.0},  # MFE +6.3% MAE -8.6% → R:R 1.5:1
+}
+
+DEFAULT_TP_SL = {"tp_pct": 5.0, "sl_pct": 5.0}
+
+
+def get_tp_sl_for_pair(pair_a: str, pair_b: str) -> dict[str, float]:
+    """Return per-pair TP/SL config from backtest MFE/MAE analysis.
+    Falls back to symmetric 5%/5% for unknown pairs.
+    """
+    return PAIR_TP_SL.get((pair_a, pair_b), dict(DEFAULT_TP_SL))
 
 
 def is_pair_validated(pair_a: str, pair_b: str) -> bool:

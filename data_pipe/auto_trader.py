@@ -41,11 +41,13 @@ STATE_FILE = REPO_ROOT / "data" / "auto_trader.state.json"
 
 # Conviction tiers
 CONVICTION_BY_VERDICT = {
+    "CPCV_ROBUST": 10.0,
     "STABLE_POSITIVE": 8.0,
     "MARGINAL_POSITIVE": 6.0,
     "INCONSISTENT": 3.0,
     "RECENTLY_BROKEN": 2.0,
-    "STABLE_NEGATIVE": 0.0,  # Never auto-trade
+    "OVERFIT_REJECTED": 0.0,
+    "STABLE_NEGATIVE": 0.0,
     "NO_SIGNALS": 0.0,
 }
 
@@ -245,10 +247,20 @@ def decide_actions(
     top = ranked[0]
     target_symbol = top.target_symbol
     conviction = top.effective_conviction
-    # Sizing scaled by ensemble — capped by max_position_pct of equity
+    # Sizing: ATR-vol-adjusted + ensemble multiplier, capped by max_position_pct
     max_position_usdt = state_account["equity"] * state_account["max_position_pct"] / 100.0
-    scaled = base_per_position * top.sizing_multiplier
+    from .atr_sizing import atr_sized_position
+    atr_result = atr_sized_position(
+        storage=storage, symbol=target_symbol, cfg=cfg,
+        equity=state_account["equity"], max_position_usdt=max_position_usdt,
+    )
+    # Apply ensemble multiplier on top of ATR-sized base
+    atr_base = atr_result["capped_size_usdt"]
+    scaled = atr_base * top.sizing_multiplier
     usdt_per_position = min(scaled, max_position_usdt)
+    # Floor at min_notional safety
+    if usdt_per_position < 5.5:
+        usdt_per_position = 5.5
     # Synthesize a "pair" for downstream compatibility (use highest |z| supporting)
     if top.supporting_pairs:
         sp = max(top.supporting_pairs, key=lambda p: abs(p[2]))
@@ -396,12 +408,23 @@ def execute_decision(
             f"z-signal {decision.signal_pair[0]}/{decision.signal_pair[1]} "
             f"z={decision.signal_z:+.2f} conviction={decision.conviction:.2f}"
         ) if decision.signal_pair else f"AUTO {decision.action}"
+
+        # Per-pair asymmetric TP/SL from MFE/MAE backtest
+        from .spot_pairs import get_tp_sl_for_pair
+        if decision.signal_pair:
+            tp_sl = get_tp_sl_for_pair(decision.signal_pair[0], decision.signal_pair[1])
+            tp_pct, sl_pct = tp_sl["tp_pct"], tp_sl["sl_pct"]
+        else:
+            tp_pct, sl_pct = None, None
+
         open_res = execute_live_open(
             storage=storage, cfg=cfg, data_dir=data_dir,
             broker=broker, symbol=decision.target_symbol,
             usdt_amount=decision.target_usdt,
             thesis=thesis,
             auto_protect=True,
+            tp_pct=tp_pct,
+            sl_pct=sl_pct,
         )
         result["outputs"].append({
             "step": "open",

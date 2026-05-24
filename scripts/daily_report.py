@@ -181,6 +181,14 @@ def tail_log(path: Path, n: int = 10) -> list[str]:
         return []
 
 
+def fetch_benchmark(storage, starting_capital):
+    from data_pipe.benchmark import compute_benchmark
+    try:
+        return compute_benchmark(storage, starting_capital)
+    except Exception as e:
+        return f"benchmark err: {e}"
+
+
 def fetch_candidates(storage, broker):
     """Run scan_all_candidates with read-only storage wrapper."""
     from data_pipe.event_scanner import scan_all_candidates
@@ -213,6 +221,7 @@ def build_report(target_date: date) -> str:
         news = fetch_news(conn, day_start, day_end, limit=15)
         risk_events = fetch_risk_events(conn, day_start, day_end)
         candidates = fetch_candidates(conn, broker)
+        benchmark = fetch_benchmark(conn, starting_capital)
     finally:
         conn.close()
 
@@ -241,6 +250,20 @@ def build_report(target_date: date) -> str:
     md.append(f"- Realized PnL today: **${realized_today:+.4f}** ({daily_pnl_pct:+.2f}%)")
     md.append(f"- Unrealized PnL (open): **${unrealized_total:+.4f}**")
     md.append(f"- Wallet total (mtm): **${wallet.get('total_usd', 0):.4f}**\n")
+
+    # Benchmark vs BTC hold
+    md.append(section("Benchmark vs BTC Hold"))
+    if isinstance(benchmark, str):
+        md.append(f"`{benchmark}`\n")
+    elif benchmark is None:
+        md.append("_No closed trades yet — benchmark not computable._\n")
+    else:
+        d = benchmark.to_dict()
+        verdict = "BEATING BTC" if d['alpha_pct'] > 0 else ("LOSING TO BTC" if d['alpha_pct'] < -1 else "~flat vs BTC")
+        md.append(f"- Period: {d['start_ts'][:19]} → {d['end_ts'][:19]} ({d['days_elapsed']:.2f} days)")
+        md.append(f"- Agent realized return: **{d['agent_return_pct']:+.3f}%** (PnL ${d['realized_pnl_usdt']:+.4f} on {d['n_closed_trades']} trades)")
+        md.append(f"- BTC hold return: **{d['btc_return_pct']:+.3f}%** (${d['btc_start_price']:,.0f} → ${d['btc_end_price']:,.0f})")
+        md.append(f"- **ALPHA: {d['alpha_pct']:+.3f}%** — {verdict}\n")
 
     # Open positions
     md.append(section(f"Open Positions ({len(open_pos)})"))

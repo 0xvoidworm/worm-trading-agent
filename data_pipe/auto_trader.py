@@ -203,24 +203,17 @@ def decide_actions(
         if close_dec:
             decisions.append(close_dec)
 
-    # ───── Step 2: OPEN candidates (validated signal cross) ─────
-    # Find signals with |z| ≥ 2 on validated pairs
-    actionable_signals: list[tuple[tuple, str, float, float]] = []  # (pair, verdict, z, conviction)
-    for (pa, pb), verdict in PAIR_BACKTEST_VERDICT.items():
-        if verdict not in VALIDATED_VERDICTS:
-            continue
-        sig = compute_pair_zsignal(storage, pa, pb)
-        if sig is None or sig.direction == "NEUTRAL":
-            continue
-        conviction = CONVICTION_BY_VERDICT.get(verdict, 0.0) + abs(sig.z) * 0.5
-        actionable_signals.append(((pa, pb), verdict, sig.z, conviction))
+    # ───── Step 2: OPEN candidates via ENSEMBLE scoring ─────
+    # Aggregate signals across validated pairs by target symbol
+    from .ensemble_signals import compute_ensemble_signals, rank_ensemble
 
-    actionable_signals.sort(key=lambda x: -x[3])  # highest conviction first
-
-    if not actionable_signals:
+    ensembles = compute_ensemble_signals(storage, threshold=2.0)
+    if not ensembles:
         if not decisions:
             decisions.append(Decision(action="SKIP", reason="no validated signals + no z-reverts"))
         return decisions
+
+    ranked = rank_ensemble(ensembles)
 
     # Account state for cap check
     state_account = get_account_state(storage, cfg)
@@ -234,25 +227,36 @@ def decide_actions(
         usdt_total = sum(
             (v if asset == "USDT" else 0) for asset, v in bal.items()
         )
-        # Approximate equity = USDT only (fast, no ticker spam)
         equity_proxy = max(usdt_total, state_account["equity"])
     except Exception:
         equity_proxy = state_account["equity"]
     alloc = allocate_capital(equity_proxy, cfg)
-    usdt_per_position = alloc.max_per_position_usdt
+    base_per_position = alloc.max_per_position_usdt
 
-    # Don't trade if per-position too small (would hit min_notional)
-    if usdt_per_position < 5.5:
+    # Don't trade if per-position too small
+    if base_per_position < 5.5:
         decisions.append(Decision(
             action="SKIP",
-            reason=f"per-position allocation ${usdt_per_position:.2f} < $5.50 (min_notional + safety)",
+            reason=f"per-position allocation ${base_per_position:.2f} < $5.50 (min_notional + safety)",
         ))
         return decisions
 
-    # Take only top signal (1 auto-decision per cycle)
-    top = actionable_signals[0]
-    pair, verdict, z, conviction = top
-    target_symbol = pair[0] if z < 0 else pair[1]
+    # Take top-ranked ensemble (1 auto-decision per cycle)
+    top = ranked[0]
+    target_symbol = top.target_symbol
+    conviction = top.effective_conviction
+    # Sizing scaled by ensemble — capped by max_position_pct of equity
+    max_position_usdt = state_account["equity"] * state_account["max_position_pct"] / 100.0
+    scaled = base_per_position * top.sizing_multiplier
+    usdt_per_position = min(scaled, max_position_usdt)
+    # Synthesize a "pair" for downstream compatibility (use highest |z| supporting)
+    if top.supporting_pairs:
+        sp = max(top.supporting_pairs, key=lambda p: abs(p[2]))
+        pair = (sp[0], sp[1])
+        z = sp[2]
+        verdict = PAIR_BACKTEST_VERDICT.get(pair, "UNKNOWN")
+    else:
+        pair, z, verdict = (target_symbol, target_symbol), 0.0, "UNKNOWN"
 
     # Check if we already have this exact position open
     have_target_open = any(
@@ -273,13 +277,15 @@ def decide_actions(
         decisions.append(Decision(
             action="OPEN",
             reason=(
-                f"validated signal {pair[0]}/{pair[1]} z={z:+.2f} verdict={verdict} "
-                f"conviction={conviction:.2f}, slot available "
-                f"({n_open}/{max_concurrent} open, {trade_cap['today']}/{trade_cap['cap']} trades today)"
+                f"ENSEMBLE n={top.n_supporting} (conflicts={top.n_conflicting}) "
+                f"target={target_symbol} eff_conviction={conviction:.2f} "
+                f"max_z={top.max_abs_z:.2f} sizing×{top.sizing_multiplier:.2f}, "
+                f"slot {n_open}/{max_concurrent}, trades {trade_cap['today']}/{trade_cap['cap']}"
             ),
             signal_pair=pair, signal_z=z,
             target_symbol=target_symbol, target_usdt=usdt_per_position,
             conviction=conviction,
+            metadata={"ensemble": top.to_dict()},
         ))
         return decisions
 

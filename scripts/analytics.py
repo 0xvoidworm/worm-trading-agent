@@ -46,6 +46,7 @@ def main() -> int:
         compute_all_windows, compute_equity_curve,
         fetch_closed_trades, fetch_open_trades, portfolio_snapshot,
     )
+    from data_pipe.benchmark import compute_benchmark
 
     cfg = yaml.safe_load(CFG_PATH.read_text()) or {}
     storage = ROStorage(DB_PATH)
@@ -54,6 +55,7 @@ def main() -> int:
         snapshot = portfolio_snapshot(storage, cfg)
         equity = compute_equity_curve(storage, snapshot["starting_capital"])
         open_df = fetch_open_trades(storage)
+        benchmark = compute_benchmark(storage, snapshot["starting_capital"])
     finally:
         storage.close()
 
@@ -61,6 +63,7 @@ def main() -> int:
         out = {
             "snapshot": snapshot,
             "windows": {k: v.as_dict() for k, v in windows.items()},
+            "benchmark": benchmark.to_dict() if benchmark else None,
             "open_trades": len(open_df),
             "equity_curve_points": len(equity),
         }
@@ -73,6 +76,22 @@ def main() -> int:
     print("=" * 70)
     for k, v in snapshot.items():
         print(f"  {k:>28s}: {v}")
+
+    if benchmark:
+        print()
+        print("=" * 70)
+        print("BENCHMARK vs BTC HOLD")
+        print("=" * 70)
+        d = benchmark.to_dict()
+        print(f"  period           : {d['start_ts'][:19]} → {d['end_ts'][:19]} ({d['days_elapsed']:.2f}d)")
+        print(f"  agent return     : {d['agent_return_pct']:+.3f}%  (PnL ${d['realized_pnl_usdt']:+.4f} on {d['n_closed_trades']} closed)")
+        print(f"  BTC hold return  : {d['btc_return_pct']:+.3f}%  (${d['btc_start_price']:.0f} → ${d['btc_end_price']:.0f})")
+        verdict_emoji = ""
+        if d['alpha_pct'] > 0:
+            verdict_emoji = "  ← BEATING BTC"
+        elif d['alpha_pct'] < -1:
+            verdict_emoji = "  ← LOSING TO BTC (consider just holding BTC)"
+        print(f"  ALPHA            : {d['alpha_pct']:+.3f}%{verdict_emoji}")
 
     print()
     print("=" * 70)

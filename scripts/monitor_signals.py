@@ -95,7 +95,42 @@ def classify_band(z: float, threshold: float) -> str:
     return "INSIDE"
 
 
-def cycle(threshold: float, state: dict) -> dict:
+def _run_auto_trade_cycle(threshold: float) -> None:
+    """Phase 4 auto-trade: invoke auto_trader.run_auto_cycle.
+
+    Imported lazily to avoid circular dep at module load.
+    """
+    import yaml
+    from pathlib import Path as _Path
+    from data_pipe.auto_trader import run_auto_cycle
+    from data_pipe.brokers import BinanceSpotBroker
+    from data_pipe.storage import Storage
+
+    cfg_path = REPO_ROOT / "config" / "pairs.yaml"
+    cfg = yaml.safe_load(cfg_path.read_text()) or {}
+    data_dir = REPO_ROOT / "data"
+
+    # Storage needs WRITE lock (will retry kalau daemon active)
+    try:
+        storage = Storage(str(DB_PATH))
+    except Exception as e:
+        log_alert(f"[auto_trade] Storage lock failed: {e} — skip this cycle")
+        return
+    try:
+        broker = BinanceSpotBroker()
+        results = run_auto_cycle(storage, cfg, data_dir, broker)
+        for r in results:
+            dec = r.get("decision", {})
+            action = dec.get("action", "?")
+            reason = dec.get("reason", "")[:100]
+            log_alert(f"[auto_trade] {action} — {reason}")
+            for o in r.get("outputs", []):
+                log_alert(f"           [{o.get('step')}] {o.get('action')} {o.get('symbol') or ''} {o.get('reason', '')[:80]}")
+    finally:
+        storage.close()
+
+
+def cycle(threshold: float, state: dict, auto_trade: bool = False) -> dict:
     now_s = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     storage = ROStorage(DB_PATH)
     try:
@@ -161,7 +196,13 @@ def cycle(threshold: float, state: dict) -> dict:
                 "last_check": now_s,
             }
     finally:
+        # CLOSE read_only first — auto-trade pass needs WRITE lock
         storage.close()
+
+    # Auto-trade pass — write Storage. Run AFTER ROStorage closed.
+    if auto_trade:
+        _run_auto_trade_cycle(threshold)
+
     return state
 
 
@@ -170,10 +211,13 @@ def main() -> int:
     p.add_argument("--cycle", type=int, default=DEFAULT_CYCLE_SEC)
     p.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     p.add_argument("--once", action="store_true")
+    p.add_argument("--auto-trade", action="store_true",
+                   help="Phase 4: auto-execute decisions via auto_trader (REAL MONEY)")
     args = p.parse_args()
 
     log_alert(
         f"[monitor_signals] started cycle={args.cycle}s threshold=±{args.threshold} "
+        f"auto_trade={args.auto_trade} "
         f"validated_pairs={[f'{a}-{b}' for (a,b),v in PAIR_BACKTEST_VERDICT.items() if v in VALIDATED_VERDICTS]}"
     )
 
@@ -181,7 +225,7 @@ def main() -> int:
     try:
         while True:
             try:
-                state = cycle(args.threshold, state)
+                state = cycle(args.threshold, state, auto_trade=args.auto_trade)
                 save_state(state)
             except Exception as e:
                 log_alert(f"[monitor_signals] cycle ERR: {type(e).__name__}: {e}")

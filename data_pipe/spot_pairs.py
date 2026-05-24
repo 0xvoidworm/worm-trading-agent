@@ -42,14 +42,15 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("ARB/USDT", "OP/USDT"),
     ("BNB/USDT", "BTC/USDT"),
     ("XRP/USDT", "LTC/USDT"),
-    # New post-universe-expansion (validated subset only — those with
-    # consistent P3 positive edge per backtest_universe_pairs.py 2026-05-24)
+    # Round 1 validated (per universe_pairs 2026-05-24 first pass)
     ("NEAR/USDT", "AVAX/USDT"),
     ("SUI/USDT", "SOL/USDT"),
     ("SUI/USDT", "ETH/USDT"),
     ("TON/USDT", "ETH/USDT"),
     ("DOGE/USDT", "BTC/USDT"),
     ("APT/USDT", "SOL/USDT"),
+    # Round 2 validated (added 2026-05-24 second pass)
+    ("TRX/USDT", "ETH/USDT"),   # P1+P2+P3 all positive (consistent like NEAR/AVAX)
 ]
 
 # Per-pair backtest verdict — REVISED 2026-05-24 (universe expansion).
@@ -63,24 +64,38 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
 #
 # CONVICTION = recent year only. Full history is suggestive but not decisive.
 PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
-    # Strong recent edge (P3 STABLE_POSITIVE)
+    # ─────── Strong recent edge (P3 STABLE_POSITIVE) ───────
     ("SUI/USDT", "SOL/USDT"):   "STABLE_POSITIVE",    # P3 67% wr +3.46% avg
-    # Consistent across all 3 periods
-    ("NEAR/USDT", "AVAX/USDT"): "STABLE_POSITIVE",    # P1+P2+P3 all positive, P3 54% +0.71%
-    # Recent positive (P3 MARGINAL_POSITIVE)
-    ("AVAX/USDT", "SOL/USDT"):  "MARGINAL_POSITIVE",  # P3 52% +0.13% (decaying but still wins)
-    ("SUI/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +1.72% (newly emerging)
+    ("NEAR/USDT", "AVAX/USDT"): "STABLE_POSITIVE",    # P1+P2+P3 all positive
+    ("TRX/USDT", "ETH/USDT"):   "STABLE_POSITIVE",    # P3 58% wr +0.61% (consistent P1+P2+P3)
+    # ─────── Recent positive (P3 MARGINAL_POSITIVE) ───────
+    ("AVAX/USDT", "SOL/USDT"):  "MARGINAL_POSITIVE",  # P3 52% +0.13%
+    ("SUI/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +1.72%
     ("TON/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +0.95%
     ("DOGE/USDT", "BTC/USDT"):  "MARGINAL_POSITIVE",  # P3 50% +0.99%
     ("APT/USDT", "SOL/USDT"):   "MARGINAL_POSITIVE",  # P3 50% +0.34%
-    # Recently BROKEN (full-history positive, recent year negative)
+    # ─────── Recently BROKEN ───────
     ("BNB/USDT", "BTC/USDT"):   "RECENTLY_BROKEN",    # P3 31% -2.31%
-    # Inconsistent (no clear edge)
+    # ─────── Inconsistent ───────
     ("SOL/USDT", "ETH/USDT"):   "INCONSISTENT",
-    # Stable negative — AVOID signals
-    ("ETH/USDT", "BTC/USDT"):   "STABLE_NEGATIVE",    # P3 31% -4.38% (recent flip)
-    ("ARB/USDT", "OP/USDT"):    "STABLE_NEGATIVE",    # P3 22% -5.10% — strongest anti-edge
-    # No-data / insufficient
+    # ─────── Anti-edge — AVOID signals ───────
+    ("ETH/USDT", "BTC/USDT"):   "STABLE_NEGATIVE",    # P3 31% -4.38%
+    ("ARB/USDT", "OP/USDT"):    "STABLE_NEGATIVE",    # P3 22% -5.10%
+    ("ENA/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",    # P3 13% -7.73% — WORST recent
+    ("STRK/USDT", "ARB/USDT"):  "STABLE_NEGATIVE",    # P3 14% -7.29%
+    ("STX/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",    # P3 25% -5.19%
+    ("FET/USDT", "WLD/USDT"):   "STABLE_NEGATIVE",    # P3 25% -4.95%
+    ("FET/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",    # P3 36% -4.03%
+    ("PYTH/USDT", "LINK/USDT"): "STABLE_NEGATIVE",    # P3 39% -4.04%
+    ("POL/USDT", "ARB/USDT"):   "STABLE_NEGATIVE",    # P3 36% -3.89%
+    ("SEI/USDT", "SOL/USDT"):   "STABLE_NEGATIVE",    # P3 20% -3.38%
+    ("DOT/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",    # P3 33% -3.47%
+    ("WIF/USDT", "BONK/USDT"):  "STABLE_NEGATIVE",    # P3 35% -2.64%
+    ("SHIB/USDT", "DOGE/USDT"): "STABLE_NEGATIVE",    # P3 38% -2.35%
+    ("TIA/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",    # P3 31% -1.30%
+    ("CAKE/USDT", "UNI/USDT"):  "STABLE_NEGATIVE",    # P3 38% -1.80%
+    ("NEAR/USDT", "SOL/USDT"):  "STABLE_NEGATIVE",    # P3 32% -1.22%
+    # ─────── No-data / insufficient ───────
     ("XRP/USDT", "LTC/USDT"):   "NO_SIGNALS",
 }
 

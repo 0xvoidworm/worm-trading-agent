@@ -73,6 +73,36 @@ EXPANSION_PAIRS: list[tuple[str, str]] = [
     ("XRP/USDT", "LTC/USDT"),
     # ETH vs BNB
     ("ETH/USDT", "BNB/USDT"),
+    # Round 2 expansion (added 2026-05-24 second pass)
+    # L1 cluster
+    ("TIA/USDT", "ETH/USDT"),
+    ("TIA/USDT", "SOL/USDT"),
+    ("SEI/USDT", "SOL/USDT"),
+    ("INJ/USDT", "ETH/USDT"),
+    ("INJ/USDT", "SOL/USDT"),
+    ("ATOM/USDT", "ETH/USDT"),
+    ("TRX/USDT", "ETH/USDT"),
+    ("BCH/USDT", "BTC/USDT"),
+    # L2 cluster
+    ("STRK/USDT", "ARB/USDT"),
+    ("STRK/USDT", "ETH/USDT"),
+    # Restaking vs ETH
+    ("EIGEN/USDT", "ETH/USDT"),
+    # AI-narrative
+    ("VIRTUAL/USDT", "ETH/USDT"),
+    # DeFi/DEX cluster
+    ("JUP/USDT", "UNI/USDT"),
+    ("CAKE/USDT", "UNI/USDT"),
+    ("PYTH/USDT", "LINK/USDT"),
+    # Stablecoin DAO
+    ("ENA/USDT", "ETH/USDT"),
+    # Memes cluster
+    ("SHIB/USDT", "DOGE/USDT"),
+    ("WIF/USDT", "BONK/USDT"),
+    ("WIF/USDT", "DOGE/USDT"),
+    ("SHIB/USDT", "PEPE/USDT"),
+    # Gaming
+    ("IMX/USDT", "ETH/USDT"),
 ]
 
 

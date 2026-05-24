@@ -118,6 +118,69 @@ class BinanceSpotBroker:
         self._ensure_markets()
         return self._ex.fetch_ticker(symbol)
 
+    def get_market_filters(self, symbol: str) -> dict:
+        """Return min_notional / min_qty / step_size for symbol.
+
+        Binance filter rules surfaced from ccxt market info — needed pre-buy
+        to avoid Filter failure: NOTIONAL (-1013) when amount too small.
+        """
+        self._ensure_markets()
+        mk = self._ex.market(symbol)
+        limits = mk.get("limits") or {}
+        amt = limits.get("amount") or {}
+        cost = limits.get("cost") or {}
+        return {
+            "min_qty": float(amt.get("min") or 0.0),
+            "max_qty": float(amt.get("max") or 0.0),
+            "step_size": float(mk.get("precision", {}).get("amount") or 0.0),
+            "min_notional": float(cost.get("min") or 0.0),
+            "max_notional": float(cost.get("max") or 0.0),
+        }
+
+    def check_buy_feasible(self, symbol: str, usdt_amount: float, safety_pct: float = 5.0) -> Optional[str]:
+        """Pre-check: return error string if buy will likely fail or trap dust.
+
+        Reject:
+        - usdt < min_notional (BUY itself fails)
+        - usdt × (1 - safety_pct%) < min_notional (after price tick + fee, sell
+          might fall below min_notional → dust trap)
+        """
+        f = self.get_market_filters(symbol)
+        min_n = f["min_notional"]
+        if min_n <= 0:
+            return None
+        if usdt_amount < min_n:
+            return (
+                f"usdt {usdt_amount:.4f} < min_notional {min_n:.2f} — "
+                f"BUY will be rejected by Binance NOTIONAL filter"
+            )
+        # safety margin: even after price tick + step rounding, must stay > min_notional
+        # so future sell works. Add safety_pct% headroom.
+        safety = min_n * (1.0 + safety_pct / 100.0)
+        if usdt_amount < safety:
+            return (
+                f"usdt {usdt_amount:.4f} < safety {safety:.2f} (min_notional "
+                f"{min_n:.2f} + {safety_pct:.0f}%) — risk of dust trap on close"
+            )
+        return None
+
+    def check_sell_feasible(self, symbol: str, base_amount: float) -> Optional[str]:
+        """Pre-check: return error string if sell will likely fail."""
+        f = self.get_market_filters(symbol)
+        min_qty = f["min_qty"]
+        min_n = f["min_notional"]
+        if base_amount < min_qty:
+            return f"base {base_amount} < min_qty {min_qty}"
+        tk = self.get_ticker(symbol)
+        price = float(tk.get("last") or 0)
+        notional = base_amount * price
+        if notional < min_n:
+            return (
+                f"notional {notional:.4f} < min_notional {min_n:.2f} "
+                f"(base={base_amount}, price={price})"
+            )
+        return None
+
     def fetch_spot_balance(self) -> dict:
         bal = self._ex.fetch_balance({"type": "spot"})
         return {k: float(v) for k, v in (bal.get("total") or {}).items() if v and float(v) > 0}
@@ -126,8 +189,21 @@ class BinanceSpotBroker:
         return self._ex.fetch_open_orders(symbol) if symbol else self._ex.fetch_open_orders()
 
     def place_market_buy(self, symbol: str, usdt_amount: float) -> OrderResult:
-        """LIVE: spend `usdt_amount` USDT, receive base coin at market price."""
+        """LIVE: spend `usdt_amount` USDT, receive base coin at market price.
+
+        Pre-flight check_buy_feasible to avoid Binance NOTIONAL rejection
+        and dust traps. Failure returns OrderResult.success=False with
+        clear error before hitting API.
+        """
         self._ensure_markets()
+        err = self.check_buy_feasible(symbol, usdt_amount)
+        if err:
+            return OrderResult(
+                success=False, side="BUY", symbol=symbol,
+                requested_amount=float(usdt_amount), filled_amount=0.0,
+                avg_fill_price=0.0, notional_usdt=0.0, fee_usdt=0.0,
+                order_id=None, error=f"pre-flight: {err}",
+            )
         try:
             order = self._ex.create_order(
                 symbol=symbol,
@@ -146,8 +222,20 @@ class BinanceSpotBroker:
         return _parse_ccxt_order(order, side="BUY", requested=float(usdt_amount))
 
     def place_market_sell(self, symbol: str, base_amount: float) -> OrderResult:
-        """LIVE: sell `base_amount` of base coin, receive USDT."""
+        """LIVE: sell `base_amount` of base coin, receive USDT.
+
+        Pre-flight check_sell_feasible to surface dust-trap reasons before
+        wasted API call.
+        """
         self._ensure_markets()
+        err = self.check_sell_feasible(symbol, base_amount)
+        if err:
+            return OrderResult(
+                success=False, side="SELL", symbol=symbol,
+                requested_amount=float(base_amount), filled_amount=0.0,
+                avg_fill_price=0.0, notional_usdt=0.0, fee_usdt=0.0,
+                order_id=None, error=f"pre-flight: {err}",
+            )
         try:
             order = self._ex.create_order(
                 symbol=symbol,

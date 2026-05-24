@@ -44,31 +44,43 @@ ALERT_LOG = REPO_ROOT / "data" / "alerts.log"
 STATE_FILE = REPO_ROOT / "data" / "monitor.state.json"
 
 
-def fetch_open_positions() -> list[dict]:
-    conn = duckdb.connect(str(DB_PATH), read_only=True)
-    try:
-        rows = conn.execute(
-            """
-            SELECT id, pair, entry_price, size, ts
-            FROM trade_journal
-            WHERE status='OPEN'
-              AND direction IN ('LONG','SHORT')
-              AND entry_price IS NOT NULL AND size IS NOT NULL
-            ORDER BY ts
-            """
-        ).fetchall()
-    finally:
-        conn.close()
-    return [
-        {
-            "id": int(r[0]),
-            "pair": str(r[1]),
-            "entry_price": float(r[2]),
-            "size": float(r[3]),
-            "ts": r[4],
-        }
-        for r in rows
-    ]
+def fetch_open_positions(max_retries: int = 30, retry_sleep: float = 2.0) -> list[dict] | None:
+    """Read open positions. Retry on DB lock contention (daemon write cycle).
+
+    Returns None if can't acquire read lock after max_retries (caller skips cycle).
+    """
+    last_err = None
+    for _ in range(max_retries):
+        try:
+            conn = duckdb.connect(str(DB_PATH), read_only=True)
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT id, pair, entry_price, size, ts
+                    FROM trade_journal
+                    WHERE status='OPEN'
+                      AND direction IN ('LONG','SHORT')
+                      AND entry_price IS NOT NULL AND size IS NOT NULL
+                    ORDER BY ts
+                    """
+                ).fetchall()
+            finally:
+                conn.close()
+            return [
+                {
+                    "id": int(r[0]),
+                    "pair": str(r[1]),
+                    "entry_price": float(r[2]),
+                    "size": float(r[3]),
+                    "ts": r[4],
+                }
+                for r in rows
+            ]
+        except duckdb.IOException as e:
+            last_err = e
+            time.sleep(retry_sleep)
+    log_alert(f"[monitor] DB lock contention persists: {last_err}")
+    return None
 
 
 def load_state() -> dict:
@@ -101,6 +113,9 @@ def cycle(broker: BinanceSpotBroker, cfg: dict, state: dict) -> dict:
     positions = fetch_open_positions()
     now_s = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
+    if positions is None:
+        # Lock contention couldn't be resolved this cycle — skip, retry next
+        return state
     if not positions:
         # Don't spam log if no positions — only log every 30 minutes
         last_idle = state.get("_last_idle_log")

@@ -30,17 +30,23 @@ cointegration_candidates:
 regime_debounce_bars: 3
 
 # Portfolio accounting + risk-based sizing caps. Konsumsi oleh
-# data_pipe.portfolio + data_pipe.sizing. Default konservatif:
-# max_gross 100% = 1× leverage (paper). Daily-loss killswitch belum ada
-# (Step 4) — jangan naikkan sebelum itu.
+# data_pipe.portfolio + data_pipe.sizing.
+#
+# 2026-05-23 — REGIME SHIFT: paper $10k → LIVE Binance $50 experimental capital.
+# Risk parameter di-tighten untuk small-capital live experiment. Reasoning:
+#  - Binance min notional ~$5; max_position 30% = $15 → room untuk 2 concurrent
+#  - Fee Binance spot 0.1%/side = 0.2% round-trip; cap trade/day 3 → max 0.6%/day fee drag
+#  - permanent_floor_pct baru: drop 50% equity → STOP permanent, butuh manual top-up + restart
 portfolio:
-  starting_capital: 10000.0       # USDT, base equity untuk paper accounting
-  risk_pct_per_trade: 1.0         # % equity yang di-risk per trade (size × jarak SL)
-  max_position_pct: 25.0          # cap notional per posisi vs equity
-  max_gross_exposure_pct: 100.0   # cap total |notional| open vs equity
-  max_concurrent_trades: 3        # cap jumlah open positions
-  daily_loss_killswitch_pct: 2.0  # daily_pnl_pct ≤ -ini → block ENTRY (manual reset)
-  daily_loss_warn_pct: 1.0        # daily_pnl_pct ≤ -ini → emit RISK_WARN signal
+  starting_capital: 50.0          # USD, real capital di Binance (path α live)
+  risk_pct_per_trade: 5.0         # % equity yang di-risk per trade (size × jarak SL)
+  max_position_pct: 30.0          # cap notional per posisi vs equity (~$15 @ $50)
+  max_gross_exposure_pct: 60.0    # cap total |notional| open vs equity (2× position)
+  max_concurrent_trades: 2        # cap jumlah open positions (conserve, kurangi fee)
+  daily_loss_warn_pct: 8.0        # daily_pnl_pct ≤ -ini → emit RISK_WARN signal (~$4)
+  daily_loss_killswitch_pct: 15.0 # daily_pnl_pct ≤ -ini → block ENTRY (manual reset, ~$7.5)
+  permanent_floor_pct: 50.0       # equity_drawdown ≥ ini → STOP permanent (~$25)
+  max_trades_per_day: 3           # cap fee drag, force selective entries
 
 # Auto-exit triggers untuk modul data_pipe.auto_exit.
 # Override default in code by editing values below. Semua opsional — kalau

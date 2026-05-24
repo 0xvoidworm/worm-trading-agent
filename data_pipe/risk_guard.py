@@ -31,9 +31,12 @@ from .storage import Storage
 
 
 KILLSWITCH_FILE = "risk.killswitch"
+PERMANENT_KILLSWITCH_FILE = "permanent.killswitch"
 
 DEFAULT_DAILY_LOSS_KILLSWITCH_PCT = 2.0
 DEFAULT_DAILY_LOSS_WARN_PCT = 1.0
+DEFAULT_PERMANENT_FLOOR_PCT = 50.0
+DEFAULT_MAX_TRADES_PER_DAY = 3
 
 
 # ─── time helpers ────────────────────────────────────────────────────────
@@ -212,6 +215,141 @@ def remove_killswitch(data_dir: Path) -> Optional[dict]:
     prev = read_killswitch_reason(data_dir)
     p.unlink()
     return prev
+
+
+# ─── permanent floor (cumulative drawdown) ───────────────────────────────
+
+def get_equity_drawdown(storage: Storage, cfg: dict) -> dict:
+    """Snapshot drawdown from starting_capital.
+
+    drawdown_pct = (starting - equity_with_unrealized) / starting * 100
+    Positive value = loss; negative value = profit (no drawdown).
+    """
+    from .portfolio import get_equity
+
+    pcfg = _portfolio_cfg(cfg)
+    starting = float(pcfg.get("starting_capital", DEFAULT_STARTING_CAPITAL))
+    floor_pct = float(pcfg.get("permanent_floor_pct", DEFAULT_PERMANENT_FLOOR_PCT))
+    realized_equity = get_equity(storage, cfg)
+    unrealized = get_unrealized_pnl_now(storage, cfg)
+    equity_mtm = realized_equity + unrealized
+    drawdown_abs = starting - equity_mtm
+    drawdown_pct = (drawdown_abs / starting * 100.0) if starting > 0 else 0.0
+    return {
+        "starting_capital": starting,
+        "equity_realized": realized_equity,
+        "unrealized": unrealized,
+        "equity_mtm": equity_mtm,
+        "drawdown_abs": drawdown_abs,
+        "drawdown_pct": drawdown_pct,
+        "floor_pct": floor_pct,
+        "tripped": drawdown_pct >= floor_pct,
+    }
+
+
+def is_permanent_killswitch_active(data_dir: Path) -> bool:
+    return (data_dir / PERMANENT_KILLSWITCH_FILE).exists()
+
+
+def read_permanent_killswitch_reason(data_dir: Path) -> Optional[dict]:
+    p = data_dir / PERMANENT_KILLSWITCH_FILE
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return None
+
+
+def _write_permanent_killswitch(data_dir: Path, state: dict) -> None:
+    data_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "engaged_at": datetime.now(timezone.utc).isoformat(),
+        "reason": "permanent_floor",
+        "drawdown_pct": round(state["drawdown_pct"], 4),
+        "drawdown_abs": round(state["drawdown_abs"], 4),
+        "equity_mtm": round(state["equity_mtm"], 4),
+        "starting_capital": round(state["starting_capital"], 4),
+        "floor_pct": state["floor_pct"],
+        "note": (
+            "Permanent floor tripped. Manual reset required: review thesis, "
+            "decide top-up vs pivot, then `rm data/permanent.killswitch`."
+        ),
+    }
+    (data_dir / PERMANENT_KILLSWITCH_FILE).write_text(json.dumps(payload, indent=2))
+
+
+def remove_permanent_killswitch(data_dir: Path) -> Optional[dict]:
+    p = data_dir / PERMANENT_KILLSWITCH_FILE
+    if not p.exists():
+        return None
+    prev = read_permanent_killswitch_reason(data_dir)
+    p.unlink()
+    return prev
+
+
+def check_and_engage_permanent_floor(
+    storage: Storage,
+    cfg: dict,
+    data_dir: Path,
+    now_utc: datetime | None = None,
+) -> dict:
+    """Evaluate cumulative drawdown. Engage permanent killswitch + emit signal
+    kalau drawdown ≥ permanent_floor_pct. Idempotent.
+    """
+    state = get_equity_drawdown(storage, cfg)
+    engaged = False
+    signal_emitted = False
+
+    if state["tripped"]:
+        if not is_permanent_killswitch_active(data_dir):
+            _write_permanent_killswitch(data_dir, state)
+            engaged = True
+        # Emit signal sekali per engagement
+        day_start = get_day_start_utc(now_utc)
+        payload = (
+            f"drawdown_pct={state['drawdown_pct']:.2f} "
+            f"≥ floor_pct={state['floor_pct']:.2f}  "
+            f"equity_mtm={state['equity_mtm']:.2f} "
+            f"starting={state['starting_capital']:.2f}"
+        )
+        signal_emitted = _emit_risk_signal(
+            storage, "RISK_PERMANENT_FLOOR", payload,
+            "critical", day_start, now_utc=now_utc,
+        )
+
+    state["engaged"] = engaged
+    state["signal_emitted"] = signal_emitted
+    return state
+
+
+# ─── per-day trade cap ───────────────────────────────────────────────────
+
+def get_trade_count_today(
+    storage: Storage,
+    now_utc: datetime | None = None,
+) -> int:
+    """Count trades opened today (status OPEN+CLOSED, exclude TEST artifacts)."""
+    day_start = get_day_start_utc(now_utc)
+    row = storage._conn.execute(
+        "SELECT COUNT(*) FROM trade_journal "
+        "WHERE ts >= ? "
+        "  AND (thesis IS NULL OR thesis NOT LIKE ?)",
+        [day_start, _TEST_LIKE_PATTERN],
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def check_max_trades_per_day(
+    storage: Storage,
+    cfg: dict,
+    now_utc: datetime | None = None,
+) -> dict:
+    """Return {today, cap, exceeded}. Used by executor as ENTRY gate."""
+    pcfg = _portfolio_cfg(cfg)
+    cap = int(pcfg.get("max_trades_per_day", DEFAULT_MAX_TRADES_PER_DAY))
+    today = get_trade_count_today(storage, now_utc)
+    return {"today": today, "cap": cap, "exceeded": today >= cap}
 
 
 # ─── engagement (called from daemon cycle) ───────────────────────────────

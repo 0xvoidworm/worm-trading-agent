@@ -147,6 +147,7 @@ def cmd_risk(args, storage: Storage, cfg: dict) -> int:
 
 def cmd_scan(args, storage: Storage, cfg: dict) -> int:
     from data_pipe.event_scanner import scan_all_candidates
+    from data_pipe.sectors import diversification_status
 
     _print_section("Recent news (last 24h)")
     news = get_recent_news_context(storage, hours=24, limit=10)
@@ -169,14 +170,25 @@ def cmd_scan(args, storage: Storage, cfg: dict) -> int:
     if not cands:
         print("  (no candidates surfaced)")
         return 0
+
+    # Open positions for diversification check
+    open_df = storage.get_trades(status="OPEN")
+    open_symbols = open_df["pair"].astype(str).tolist() if not open_df.empty else []
+
     for c in cands[:15]:
-        src = c.source_url[:60] if c.source_url else "-"
-        print(f"  score={c.score:>4.1f} {c.kind:<9s} {c.symbol:<14s} [{c.event_type}]")
+        div = diversification_status(c.symbol, open_symbols)
+        warn = ""
+        if div["concentration_risk"]:
+            warn = f" CONCENTRATED w/ {','.join(div['matching_open'])}"
+        print(f"  score={c.score:>4.1f} {c.kind:<9s} {c.symbol:<14s} [{c.event_type}] sector={c.sector}{warn}")
         print(f"     {c.rationale[:140]}")
         if c.source_url:
-            print(f"     src: {src}")
+            print(f"     src: {c.source_url[:80]}")
     print()
-    print(f"[scan] {len(cands)} total candidates. Top action: review + call `open SYMBOL USDT --live` for high-conviction picks.")
+    if open_symbols:
+        open_sectors = [c for s in open_symbols for c in [diversification_status(s, [])["candidate_sector"]] if c != "UNKNOWN"]
+        print(f"[scan] open positions sectors: {', '.join(set(open_sectors)) if open_sectors else 'UNKNOWN'}")
+    print(f"[scan] {len(cands)} total candidates. Pick high score + non-concentrated for #N+1 position.")
     return 0
 
 

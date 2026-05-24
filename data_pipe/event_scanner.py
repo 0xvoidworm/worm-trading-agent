@@ -51,16 +51,20 @@ SYMBOL_RE = re.compile(r"\$?\b([A-Z]{2,8})(?:/USDT|/USD)?\b")
 class Candidate:
     symbol: str           # "BNB/USDT" format
     base: str             # "BNB"
-    kind: str             # "EVENT" / "NARRATIVE"
+    kind: str             # "EVENT" / "NARRATIVE" / "REL_VALUE"
     event_type: Optional[str]  # LISTING / TRENDING / etc
     score: float          # 0-10 heuristic
     rationale: str        # short thesis text
     source_url: Optional[str] = None
     detected_at: datetime = None  # type: ignore[assignment]
+    sector: str = "UNKNOWN"
 
     def __post_init__(self):
         if self.detected_at is None:
             self.detected_at = datetime.now(timezone.utc)
+        if self.sector == "UNKNOWN":
+            from .sectors import get_sector
+            self.sector = get_sector(self.symbol)
 
 
 # ─── news-driven events ────────────────────────────────────────────────────
@@ -211,11 +215,18 @@ def scan_narrative_trending(broker) -> list[Candidate]:
 # ─── orchestrator ──────────────────────────────────────────────────────────
 
 def scan_all_candidates(storage, broker) -> list[Candidate]:
-    """Run both scanners, merge, dedup by symbol (keep highest score)."""
+    """Run all scanners (news, CoinGecko, spot pairs), merge, dedup by symbol
+    (keep highest score)."""
+    from .spot_pairs import scan_spot_pairs, pair_signals_as_candidates
     events = scan_news_events(storage)
     narrative = scan_narrative_trending(broker)
+    try:
+        pair_signals = scan_spot_pairs(storage)
+        rel_value = pair_signals_as_candidates(pair_signals)
+    except Exception:
+        rel_value = []
     by_symbol: dict[str, Candidate] = {}
-    for c in events + narrative:
+    for c in events + narrative + rel_value:
         existing = by_symbol.get(c.symbol)
         if existing is None or c.score > existing.score:
             by_symbol[c.symbol] = c

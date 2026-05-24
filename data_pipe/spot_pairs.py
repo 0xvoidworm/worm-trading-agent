@@ -168,6 +168,46 @@ def is_pair_allowed_in_regime(pair_a: str, pair_b: str, regime: str) -> bool:
     return regime in gate
 
 
+# Per-pair formal cointegration status (Engle-Granger ADF on log-prices 2026-05-24).
+# Schema: (pair_a, pair_b) → {"coint": bool, "adf_p": float, "beta": float,
+#                              "half_life_days": float, "max_hold_h": int}
+#
+# BRUTAL FINDING (audit 2026-05-24):
+# Only 3/26 pairs PASS ADF p<0.05 (CAKE/UNI, POL/ARB, FET/WLD) — and we labeled
+# them STABLE_NEGATIVE based on backtest! Validated pairs ALL fail classical
+# cointegration test. Means our z-score edge captures sector rotation / sentiment
+# patterns, NOT pure mean reversion.
+#
+# Implication: keep CPCV verdicts as primary (statistical edge confirmed).
+# Use this map for:
+#   - max_hold_h per-pair (4× half-life if applicable, else default 14d)
+#   - small bonus conviction (+1) for pairs that ARE cointegrated AND CPCV-validated
+PAIR_COINT_STATUS: dict[tuple[str, str], dict] = {
+    ("NEAR/USDT", "AVAX/USDT"): {"coint": False, "adf_p": 0.515, "beta": 1.045, "half_life_days": 90.2, "max_hold_h": 21*24},
+    ("AVAX/USDT", "SOL/USDT"):  {"coint": False, "adf_p": 0.747, "beta": 0.436, "half_life_days": 240.7, "max_hold_h": 21*24},
+    ("DOGE/USDT", "BTC/USDT"):  {"coint": False, "adf_p": 0.261, "beta": 0.940, "half_life_days": 81.7, "max_hold_h": 21*24},
+    ("TRX/USDT", "ETH/USDT"):   {"coint": False, "adf_p": 0.902, "beta": 0.799, "half_life_days": 1265, "max_hold_h": 14*24},
+    ("APT/USDT", "SOL/USDT"):   {"coint": False, "adf_p": 0.970, "beta": 0.067, "half_life_days": 5012, "max_hold_h": 14*24},  # beta near 0 = no relationship
+    ("TON/USDT", "ETH/USDT"):   {"coint": False, "adf_p": 0.575, "beta": 0.969, "half_life_days": 219.7, "max_hold_h": 21*24},
+    ("SUI/USDT", "SOL/USDT"):   {"coint": False, "adf_p": 0.259, "beta": 0.714, "half_life_days": 112, "max_hold_h": 21*24},
+    ("SUI/USDT", "ETH/USDT"):   {"coint": False, "adf_p": 0.599, "beta": 1.441, "half_life_days": 211, "max_hold_h": 21*24},
+}
+
+
+def get_max_hold_h_for_pair(pair_a: str, pair_b: str, default_h: int = 14*24) -> int:
+    """Return per-pair max_hold_h based on half-life (4× hl capped 3-21d)."""
+    status = PAIR_COINT_STATUS.get((pair_a, pair_b))
+    if not status:
+        return default_h
+    return int(status.get("max_hold_h", default_h))
+
+
+def is_pair_cointegrated(pair_a: str, pair_b: str) -> bool:
+    """True if formal Engle-Granger ADF p < 0.05 confirms cointegration."""
+    status = PAIR_COINT_STATUS.get((pair_a, pair_b))
+    return bool(status and status.get("coint", False))
+
+
 def is_pair_validated(pair_a: str, pair_b: str) -> bool:
     """Return True if backtest verdict suggests historical edge."""
     return PAIR_BACKTEST_VERDICT.get((pair_a, pair_b), "UNKNOWN") in VALIDATED_VERDICTS

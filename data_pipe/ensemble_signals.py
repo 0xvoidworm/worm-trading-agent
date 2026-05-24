@@ -96,21 +96,32 @@ def compute_ensemble_signals(
     storage,
     threshold: float = 2.0,
 ) -> dict[str, EnsembleSignal]:
-    """Aggregate validated pair signals by target symbol.
+    """Aggregate validated pair signals by target symbol — MULTI-STRATEGY.
 
-    For each validated pair (A,B):
+    Combines:
+    1. RAW-RATIO signals on PAIR_BACKTEST_VERDICT validated pairs
+    2. LOG-SPREAD signals on LOG_SPREAD_VERDICT validated pairs
+
+    Both can fire on same target → aggregate convictions. DUAL_VALIDATED
+    pairs (DOGE/BTC, TRX/ETH) get bonus +2.0.
+
+    For each pair (A,B):
     - z > +threshold → target = B (B is cheap vs A)
     - z < -threshold → target = A (A is cheap vs B)
     - |z| ≤ threshold → no signal (NEUTRAL)
-
-    Anti-edge pairs (STABLE_NEGATIVE) are NOT included — pure noise.
 
     Returns dict keyed by target_symbol.
     """
     by_target: dict[str, EnsembleSignal] = {}
 
-    from .spot_pairs import is_dual_validated
+    from .spot_pairs import (
+        is_dual_validated, LOG_SPREAD_VERDICT, PAIR_BACKTEST_VERDICT,
+    )
+    from .log_spread_signals import compute_log_spread_signal
 
+    LOG_VALIDATED = {"STABLE_POSITIVE", "MARGINAL_POSITIVE"}
+
+    # ─── Path 1: RAW-RATIO strategy ───────────────────────────────────────
     for (pa, pb), verdict in PAIR_BACKTEST_VERDICT.items():
         if verdict not in VALIDATED_VERDICTS:
             continue
@@ -121,12 +132,10 @@ def compute_ensemble_signals(
         target = pa if sig.direction == "BUY_A" else pb
         other = pb if sig.direction == "BUY_A" else pa
         base_conv = CONVICTION_BY_VERDICT.get(verdict, 0.0)
-        # Dual-strategy bonus: +2.0 if also validated under log-spread
         if is_dual_validated(pa, pb):
             base_conv += 2.0
         conv = base_conv + abs(sig.z) * 0.5
 
-        # Get-or-create target entry
         if target not in by_target:
             by_target[target] = EnsembleSignal(target_symbol=target)
         es = by_target[target]
@@ -135,13 +144,48 @@ def compute_ensemble_signals(
         es.max_abs_z = max(es.max_abs_z, abs(sig.z))
         es.supporting_pairs.append((pa, pb, sig.z, conv))
 
-        # Conflict detection: this signal also implies OTHER is overvalued.
-        # If `other` is in by_target as a SUPPORTING target, that's a conflict.
-        # E.g., BUY_B AVAX from NEAR/AVAX → NEAR is overvalued.
-        #       If another pair NEAR/SOL fired BUY_A NEAR earlier, conflict.
         if other in by_target:
             by_target[other].n_conflicting += 1
             by_target[other].conflicting_pairs.append((pa, pb, sig.z))
+
+    # ─── Path 2: LOG-SPREAD strategy ──────────────────────────────────────
+    # Scan pairs validated under LOG_SPREAD_VERDICT (incl. POL/ARB which is
+    # NOT in PAIR_BACKTEST_VERDICT validated, but works under log-spread).
+    for (pa, pb), log_verdict in LOG_SPREAD_VERDICT.items():
+        if log_verdict not in LOG_VALIDATED:
+            continue
+        sig = compute_log_spread_signal(storage, pa, pb, z_threshold=threshold)
+        if sig is None or sig.direction == "NEUTRAL":
+            continue
+
+        target = pa if sig.direction == "BUY_A" else pb
+        other = pb if sig.direction == "BUY_A" else pa
+        # Log-spread base conviction = STABLE_POSITIVE 8.0 or MARGINAL 6.0
+        base_conv = 8.0 if log_verdict == "STABLE_POSITIVE" else 6.0
+        if is_dual_validated(pa, pb):
+            base_conv += 2.0
+        conv = base_conv + abs(sig.z) * 0.5
+
+        if target not in by_target:
+            by_target[target] = EnsembleSignal(target_symbol=target)
+        es = by_target[target]
+        # Avoid double-count: if same pair already supported via raw-ratio, skip add
+        already_supporting = any(
+            sp[0] == pa and sp[1] == pb for sp in es.supporting_pairs
+        )
+        if already_supporting:
+            # Boost existing entry's conviction (both strategies fire same pair)
+            es.total_conviction += 1.0  # small extra
+            continue
+        es.n_supporting += 1
+        es.total_conviction += conv
+        es.max_abs_z = max(es.max_abs_z, abs(sig.z))
+        # Tag with [LOG] provenance in pair tuple via 4th element
+        es.supporting_pairs.append((f"{pa}[LOG]", pb, sig.z, conv))
+
+        if other in by_target:
+            by_target[other].n_conflicting += 1
+            by_target[other].conflicting_pairs.append((f"{pa}[LOG]", pb, sig.z))
 
     return by_target
 

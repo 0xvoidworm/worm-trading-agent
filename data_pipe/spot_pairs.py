@@ -41,6 +41,25 @@ DEFAULT_PAIRS: list[tuple[str, str]] = [
     ("XRP/USDT", "LTC/USDT"),   # Payment vs Payment
 ]
 
+# Per-pair backtest verdict (from scripts/backtest_spot_pairs.py 2026-05-24,
+# z=2.0 entry, z=0 exit, hold 14d, SL -10%, fee 0.1%/side, 3y 1h OHLCV).
+# Use to filter signals: only act on VALIDATED pairs in live trading.
+PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
+    ("ETH/USDT", "BTC/USDT"):  "INCONSISTENT",       # 44% wr, -8% compound
+    ("SOL/USDT", "ETH/USDT"):  "INCONSISTENT",       # 48% wr, -4% compound
+    ("AVAX/USDT", "SOL/USDT"): "MARGINAL_POSITIVE",  # 52% wr, +311% compound (robust @z=2.5 hold=7d: +105%)
+    ("ARB/USDT", "OP/USDT"):   "STABLE_NEGATIVE",    # 33% wr, -77% compound — AVOID
+    ("BNB/USDT", "BTC/USDT"):  "STABLE_POSITIVE",    # 56% wr, +20% compound
+    ("XRP/USDT", "LTC/USDT"):  "NO_SIGNALS",         # insufficient bars
+}
+
+VALIDATED_VERDICTS = {"STABLE_POSITIVE", "MARGINAL_POSITIVE"}
+
+
+def is_pair_validated(pair_a: str, pair_b: str) -> bool:
+    """Return True if backtest verdict suggests historical edge."""
+    return PAIR_BACKTEST_VERDICT.get((pair_a, pair_b), "UNKNOWN") in VALIDATED_VERDICTS
+
 
 @dataclass
 class PairZSignal:
@@ -145,7 +164,12 @@ def scan_spot_pairs(
 def pair_signals_as_candidates(signals: list[PairZSignal]) -> list[Candidate]:
     """Convert PairZSignals into Candidate list for unified scan output.
 
-    Only emit when direction != NEUTRAL. Score = min(8, 5 + |z|).
+    Only emit when direction != NEUTRAL.
+
+    Score logic uses backtest validation:
+    - VALIDATED pair (STABLE_POSITIVE / MARGINAL_POSITIVE) → base 7 + |z|
+    - INCONSISTENT pair → base 4 + |z| (penalize, less conviction)
+    - STABLE_NEGATIVE pair → score 1 (avoid signal — historical anti-edge)
     """
     out: list[Candidate] = []
     for s in signals:
@@ -154,7 +178,19 @@ def pair_signals_as_candidates(signals: list[PairZSignal]) -> list[Candidate]:
         target = s.pair_a if s.direction == "BUY_A" else s.pair_b
         other = s.pair_b if s.direction == "BUY_A" else s.pair_a
         base = target.split("/")[0]
-        score = min(8.0, 5.0 + abs(s.z))
+        verdict = PAIR_BACKTEST_VERDICT.get((s.pair_a, s.pair_b), "UNKNOWN")
+        if verdict == "STABLE_NEGATIVE":
+            score = 1.0  # historical anti-edge, avoid
+            verdict_note = "AVOID (backtest STABLE_NEGATIVE)"
+        elif verdict in VALIDATED_VERDICTS:
+            score = min(9.0, 7.0 + abs(s.z))
+            verdict_note = f"backtest {verdict}"
+        elif verdict == "INCONSISTENT":
+            score = min(7.0, 4.0 + abs(s.z))
+            verdict_note = f"backtest {verdict} — low conviction"
+        else:
+            score = min(8.0, 5.0 + abs(s.z))
+            verdict_note = f"backtest {verdict}"
         out.append(Candidate(
             symbol=target,
             base=base,
@@ -163,9 +199,8 @@ def pair_signals_as_candidates(signals: list[PairZSignal]) -> list[Candidate]:
             score=score,
             rationale=(
                 f"{target} relatively cheap vs {other} "
-                f"(ratio z={s.z:+.2f} over {s.n_bars} bars 1h, "
-                f"mean ratio {s.mean:.6g}, current {s.ratio_now:.6g}). "
-                f"Mean reversion expected."
+                f"(ratio z={s.z:+.2f}, {verdict_note}). "
+                f"Mean reversion expected if validated."
             ),
         ))
     return out

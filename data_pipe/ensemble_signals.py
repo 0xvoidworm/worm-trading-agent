@@ -109,6 +109,8 @@ def compute_ensemble_signals(
     """
     by_target: dict[str, EnsembleSignal] = {}
 
+    from .spot_pairs import is_dual_validated
+
     for (pa, pb), verdict in PAIR_BACKTEST_VERDICT.items():
         if verdict not in VALIDATED_VERDICTS:
             continue
@@ -119,6 +121,9 @@ def compute_ensemble_signals(
         target = pa if sig.direction == "BUY_A" else pb
         other = pb if sig.direction == "BUY_A" else pa
         base_conv = CONVICTION_BY_VERDICT.get(verdict, 0.0)
+        # Dual-strategy bonus: +2.0 if also validated under log-spread
+        if is_dual_validated(pa, pb):
+            base_conv += 2.0
         conv = base_conv + abs(sig.z) * 0.5
 
         # Get-or-create target entry

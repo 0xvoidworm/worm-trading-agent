@@ -51,6 +51,10 @@ CONVICTION_BY_VERDICT = {
     "NO_SIGNALS": 0.0,
 }
 
+# Bonus conviction for pairs validated under BOTH raw-ratio AND log-spread strategies.
+# Edge robust across strategy formulations = highest meta-conviction.
+DUAL_VALIDATED_BONUS = 2.0
+
 # Min cooldown between auto-trades (seconds)
 DEFAULT_COOLDOWN_SEC = 1800  # 30 min
 

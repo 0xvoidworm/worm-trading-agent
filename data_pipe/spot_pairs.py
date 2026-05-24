@@ -208,6 +208,51 @@ def is_pair_cointegrated(pair_a: str, pair_b: str) -> bool:
     return bool(status and status.get("coint", False))
 
 
+# Log-spread (β-weighted) strategy verdict per pair (audit 2026-05-24).
+# Method: spread = log(A) - β·log(B), β from OLS on first 50% (train).
+# Backtest on remaining 50% OOS. Same z=±2 entry/exit logic as raw-ratio.
+#
+# FINDINGS (15 pairs tested):
+# - Only 3 STABLE_POSITIVE in log-spread: DOGE/BTC, TRX/ETH, POL/ARB
+# - POL/ARB REHABILITATED: was STABLE_NEGATIVE in raw-ratio, now POSITIVE
+#   (cointegrated pair p=0.033 finally shows edge with proper β)
+# - NEAR/AVAX (raw-ratio CPCV_ROBUST!) becomes INCONSISTENT in log-spread.
+#   → Edge was specifically raw-ratio dependent, not classical mean-rev
+# - Strategy type matters: different pairs work under different formulations
+LOG_SPREAD_VERDICT: dict[tuple[str, str], str] = {
+    ("DOGE/USDT", "BTC/USDT"):  "STABLE_POSITIVE",  # β=0.97 wr=57% avg=+0.88% comp=+13%
+    ("TRX/USDT", "ETH/USDT"):   "STABLE_POSITIVE",  # β=0.67 wr=60% avg=+0.82% comp=+15%
+    ("POL/USDT", "ARB/USDT"):   "STABLE_POSITIVE",  # β=0.74 wr=57% avg=+1.35% comp=+18% NEW EDGE!
+    ("NEAR/USDT", "AVAX/USDT"): "INCONSISTENT",     # raw-ratio CPCV_ROBUST but log-spread fails
+    ("AVAX/USDT", "SOL/USDT"):  "INCONSISTENT",
+    ("APT/USDT", "SOL/USDT"):   "INCONSISTENT",
+    ("TON/USDT", "ETH/USDT"):   "INCONSISTENT",
+    ("FET/USDT", "WLD/USDT"):   "INCONSISTENT",
+    ("BNB/USDT", "BTC/USDT"):   "INCONSISTENT",
+    ("SUI/USDT", "SOL/USDT"):   "STABLE_NEGATIVE",
+    ("SUI/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",
+    ("CAKE/USDT", "UNI/USDT"):  "STABLE_NEGATIVE",
+    ("ETH/USDT", "BTC/USDT"):   "STABLE_NEGATIVE",
+    ("ARB/USDT", "OP/USDT"):    "STABLE_NEGATIVE",
+    ("SOL/USDT", "ETH/USDT"):   "STABLE_NEGATIVE",
+}
+
+
+def get_log_spread_verdict(pair_a: str, pair_b: str) -> str:
+    """Log-spread (β-weighted) verdict. Different from raw-ratio PAIR_BACKTEST_VERDICT."""
+    return LOG_SPREAD_VERDICT.get((pair_a, pair_b), "NOT_TESTED")
+
+
+def is_dual_validated(pair_a: str, pair_b: str) -> bool:
+    """True if pair is validated under BOTH raw-ratio AND log-spread methods.
+
+    Highest conviction tier: edge robust across strategy formulations.
+    """
+    raw = PAIR_BACKTEST_VERDICT.get((pair_a, pair_b)) in VALIDATED_VERDICTS
+    log = get_log_spread_verdict(pair_a, pair_b) in {"STABLE_POSITIVE", "MARGINAL_POSITIVE"}
+    return raw and log
+
+
 def is_pair_validated(pair_a: str, pair_b: str) -> bool:
     """Return True if backtest verdict suggests historical edge."""
     return PAIR_BACKTEST_VERDICT.get((pair_a, pair_b), "UNKNOWN") in VALIDATED_VERDICTS

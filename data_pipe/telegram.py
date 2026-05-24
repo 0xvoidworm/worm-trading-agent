@@ -87,7 +87,7 @@ def discover_chat_id() -> Optional[str]:
 def send_message(
     text: str,
     chat_id: Optional[str] = None,
-    parse_mode: str = "Markdown",
+    parse_mode: Optional[str] = "Markdown",
     silent: bool = False,
 ) -> bool:
     """Send Telegram message. Returns True on success, False on no-op or failure.
@@ -108,16 +108,18 @@ def send_message(
         if not cid:
             return False
 
+    payload = {
+        "chat_id": cid,
+        "text": text,
+        "disable_notification": silent,
+        "disable_web_page_preview": True,
+    }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
     try:
         r = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
-            json={
-                "chat_id": cid,
-                "text": text,
-                "parse_mode": parse_mode,
-                "disable_notification": silent,
-                "disable_web_page_preview": True,
-            },
+            json=payload,
             timeout=HTTP_TIMEOUT,
         )
         r.raise_for_status()
@@ -127,13 +129,17 @@ def send_message(
 
 
 def notify_trade(action: str, symbol: str, details: dict, urgent: bool = False) -> bool:
-    """Higher-level helper: format trade event as Telegram message."""
+    """Higher-level helper: format trade event as Telegram message.
+
+    Uses plain text (no Markdown) to avoid parse errors with underscores
+    in keys like trade_id, asset symbols with slashes, etc.
+    """
     icon = {"OPEN": "BUY", "CLOSE": "SELL", "SKIP": "SKIP", "ERROR": "ERR",
             "TAKE_PROFIT": "TP-HIT", "STOP_LOSS": "SL-HIT",
             "TIME_STOP": "TIME-STOP", "PROTECT": "PROTECT",
             "ALERT": "ALERT"}.get(action, action)
-    lines = [f"*[{icon}]* `{symbol}`"]
+    lines = [f"[{icon}] {symbol}"]
     for k, v in details.items():
-        lines.append(f"  {k}: `{v}`")
+        lines.append(f"  {k}: {v}")
     text = "\n".join(lines)
-    return send_message(text, silent=not urgent)
+    return send_message(text, parse_mode=None, silent=not urgent)

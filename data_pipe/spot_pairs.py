@@ -31,32 +31,57 @@ from .sectors import get_sector
 DEFAULT_LOOKBACK_HOURS = 24 * 30  # 30 days of 1h bars = 720 bars
 DEFAULT_Z_THRESHOLD = 2.0
 
-# Pairs to scan (must both exist in DB OHLCV)
+# Pairs to scan (must both exist in DB OHLCV) — EXPANDED 2026-05-24 after
+# universe expansion backfill (18 new symbols). Includes both validated
+# (will surface scan candidates) AND anti-edge (filtered to score 1).
 DEFAULT_PAIRS: list[tuple[str, str]] = [
-    ("ETH/USDT", "BTC/USDT"),   # L1 vs Store of Value
-    ("SOL/USDT", "ETH/USDT"),   # L1 vs L1
-    ("AVAX/USDT", "SOL/USDT"),  # L1 vs L1
-    ("ARB/USDT", "OP/USDT"),    # L2 vs L2 (classic same-sector)
-    ("BNB/USDT", "BTC/USDT"),   # CEX vs Store of Value
-    ("XRP/USDT", "LTC/USDT"),   # Payment vs Payment
+    # Original 6 (DO NOT remove — backward compat with existing reports)
+    ("ETH/USDT", "BTC/USDT"),
+    ("SOL/USDT", "ETH/USDT"),
+    ("AVAX/USDT", "SOL/USDT"),
+    ("ARB/USDT", "OP/USDT"),
+    ("BNB/USDT", "BTC/USDT"),
+    ("XRP/USDT", "LTC/USDT"),
+    # New post-universe-expansion (validated subset only — those with
+    # consistent P3 positive edge per backtest_universe_pairs.py 2026-05-24)
+    ("NEAR/USDT", "AVAX/USDT"),
+    ("SUI/USDT", "SOL/USDT"),
+    ("SUI/USDT", "ETH/USDT"),
+    ("TON/USDT", "ETH/USDT"),
+    ("DOGE/USDT", "BTC/USDT"),
+    ("APT/USDT", "SOL/USDT"),
 ]
 
-# Per-pair backtest verdict — REVISED 2026-05-24 to use RECENT YEAR
-# (walk-forward P3 = May 2025 → May 2026). Full-history verdict shown as comment.
+# Per-pair backtest verdict — REVISED 2026-05-24 (universe expansion).
+# Uses walk-forward P3 (RECENT YEAR = May 2025 → May 2026).
+# Full-history verdict shown as comment for context.
 #
-# Walk-forward exposed that BNB/BTC's "STABLE_POSITIVE" full-history verdict
-# was driven by 2023-2024; in last 12mo it flipped STABLE_NEGATIVE (31% wr,
-# -33% compound). AVAX/SOL also decaying (P1 +261%, P2 +62%, P3 -7%) but
-# barely positive recently.
+# Walk-forward exposed many "full-history validated" pairs broke recently
+# (BNB/BTC, AVAX/SOL decay, ETH/BTC flipped negative). Universe expansion
+# revealed new edges in alt-cluster pairs (NEAR/AVAX consistent across all
+# periods, SUI/SOL strong recent +3.46% avg).
 #
-# Lesson: trust RECENT (last 12mo) verdict over full-history average.
+# CONVICTION = recent year only. Full history is suggestive but not decisive.
 PAIR_BACKTEST_VERDICT: dict[tuple[str, str], str] = {
-    ("ETH/USDT", "BTC/USDT"):  "INCONSISTENT",       # full 44% wr -8%, no clear edge
-    ("SOL/USDT", "ETH/USDT"):  "INCONSISTENT",       # full 48% wr -4%
-    ("AVAX/USDT", "SOL/USDT"): "MARGINAL_POSITIVE",  # full 52% +312%, recent 52% +0.13% avg (decaying but still wins>losses)
-    ("ARB/USDT", "OP/USDT"):   "STABLE_NEGATIVE",    # full 33% wr -77% — AVOID
-    ("BNB/USDT", "BTC/USDT"):  "RECENTLY_BROKEN",    # full 56% +20%, recent 31% wr -33% — EDGE DIED 2025-2026
-    ("XRP/USDT", "LTC/USDT"):  "NO_SIGNALS",         # insufficient bars
+    # Strong recent edge (P3 STABLE_POSITIVE)
+    ("SUI/USDT", "SOL/USDT"):   "STABLE_POSITIVE",    # P3 67% wr +3.46% avg
+    # Consistent across all 3 periods
+    ("NEAR/USDT", "AVAX/USDT"): "STABLE_POSITIVE",    # P1+P2+P3 all positive, P3 54% +0.71%
+    # Recent positive (P3 MARGINAL_POSITIVE)
+    ("AVAX/USDT", "SOL/USDT"):  "MARGINAL_POSITIVE",  # P3 52% +0.13% (decaying but still wins)
+    ("SUI/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +1.72% (newly emerging)
+    ("TON/USDT", "ETH/USDT"):   "MARGINAL_POSITIVE",  # P3 53% +0.95%
+    ("DOGE/USDT", "BTC/USDT"):  "MARGINAL_POSITIVE",  # P3 50% +0.99%
+    ("APT/USDT", "SOL/USDT"):   "MARGINAL_POSITIVE",  # P3 50% +0.34%
+    # Recently BROKEN (full-history positive, recent year negative)
+    ("BNB/USDT", "BTC/USDT"):   "RECENTLY_BROKEN",    # P3 31% -2.31%
+    # Inconsistent (no clear edge)
+    ("SOL/USDT", "ETH/USDT"):   "INCONSISTENT",
+    # Stable negative — AVOID signals
+    ("ETH/USDT", "BTC/USDT"):   "STABLE_NEGATIVE",    # P3 31% -4.38% (recent flip)
+    ("ARB/USDT", "OP/USDT"):    "STABLE_NEGATIVE",    # P3 22% -5.10% — strongest anti-edge
+    # No-data / insufficient
+    ("XRP/USDT", "LTC/USDT"):   "NO_SIGNALS",
 }
 
 # Only "STABLE_POSITIVE" and "MARGINAL_POSITIVE" count as actionable.

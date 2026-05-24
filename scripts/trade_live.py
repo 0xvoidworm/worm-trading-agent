@@ -146,8 +146,10 @@ def cmd_risk(args, storage: Storage, cfg: dict) -> int:
 
 
 def cmd_scan(args, storage: Storage, cfg: dict) -> int:
+    from data_pipe.event_scanner import scan_all_candidates
+
     _print_section("Recent news (last 24h)")
-    news = get_recent_news_context(storage, hours=24, limit=20)
+    news = get_recent_news_context(storage, hours=24, limit=10)
     if news.empty:
         print("  (no news — daemon mati / DB news table kosong)")
     else:
@@ -155,10 +157,26 @@ def cmd_scan(args, storage: Storage, cfg: dict) -> int:
             ts = row["published_at"]
             ts_s = ts.strftime("%Y-%m-%d %H:%M") if hasattr(ts, "strftime") else str(ts)
             sym = f"[{row['symbols']}]" if row.get("symbols") else ""
-            print(f"  {ts_s}  {row['source']:>14s}  {sym}  {row['title'][:120]}")
+            print(f"  {ts_s}  {row['source']:>14s}  {sym}  {row['title'][:100]}")
 
-    _print_section("Phase 2 candidates (LLM-driven)")
-    print("  (Phase 1: candidate selectors are stubs. Manual entries via `open` command.)")
+    _print_section("Phase 2 candidates (event + narrative scan)")
+    broker = make_broker(live=False)
+    try:
+        cands = scan_all_candidates(storage, broker)
+    except Exception as e:
+        print(f"  scan err: {type(e).__name__}: {e}")
+        return 1
+    if not cands:
+        print("  (no candidates surfaced)")
+        return 0
+    for c in cands[:15]:
+        src = c.source_url[:60] if c.source_url else "-"
+        print(f"  score={c.score:>4.1f} {c.kind:<9s} {c.symbol:<14s} [{c.event_type}]")
+        print(f"     {c.rationale[:140]}")
+        if c.source_url:
+            print(f"     src: {src}")
+    print()
+    print(f"[scan] {len(cands)} total candidates. Top action: review + call `open SYMBOL USDT --live` for high-conviction picks.")
     return 0
 
 

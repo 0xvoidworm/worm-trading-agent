@@ -103,30 +103,60 @@ def propose_event_trade(
     storage,
     cfg: dict,
     allocation: CapitalAllocation,
+    broker=None,
 ) -> Optional[TradeCandidate]:
-    """Phase 1 placeholder. Phase 2 will scan:
-      - Binance announcements (Launchpool, new listings, delistings)
-      - On-chain whale movements (when paid API in scope)
-      - Token burn schedules
+    """Phase 2: scan recent news for Binance event keywords.
 
-    Returns None for now — operator must call CLI manually.
+    Returns highest-scored EVENT candidate if any. Allocation determines
+    usdt_amount = allocation.max_per_position_usdt. Caller decides whether
+    to actually trade.
     """
-    return None
+    from .event_scanner import scan_news_events
+    events = scan_news_events(storage, lookback_hours=6, limit=50)
+    if not events:
+        return None
+    top = events[0]
+    if top.score < 5.0:
+        return None
+    return TradeCandidate(
+        symbol=top.symbol,
+        side="BUY",
+        usdt_amount=allocation.max_per_position_usdt,
+        kind="EVENT",
+        thesis=top.rationale,
+        confidence=top.score,
+        source_refs=[top.source_url] if top.source_url else [],
+    )
 
 
 def propose_narrative_trade(
     storage,
     cfg: dict,
     allocation: CapitalAllocation,
+    broker=None,
 ) -> Optional[TradeCandidate]:
-    """Phase 1 placeholder. Phase 2 will scan:
-      - News in last N hours (existing DB news table)
-      - Crypto Twitter/Reddit sentiment shifts
-      - LLM-rated narrative emerging clusters
+    """Phase 2: CoinGecko trending → Binance-tradeable filter.
 
-    Returns None for now.
+    Requires broker for tradeable check. Returns highest-scored NARRATIVE
+    candidate if any tradeable.
     """
-    return None
+    if broker is None:
+        return None
+    from .event_scanner import scan_narrative_trending
+    narrative = scan_narrative_trending(broker)
+    valid = [c for c in narrative if c.event_type != "ERROR" and c.score >= 5.0]
+    if not valid:
+        return None
+    top = valid[0]
+    return TradeCandidate(
+        symbol=top.symbol,
+        side="BUY",
+        usdt_amount=allocation.max_per_position_usdt,
+        kind="NARRATIVE",
+        thesis=top.rationale,
+        confidence=top.score,
+        source_refs=[],
+    )
 
 
 def manual_candidate(

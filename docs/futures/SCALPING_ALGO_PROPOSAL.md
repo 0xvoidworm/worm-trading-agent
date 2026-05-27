@@ -109,3 +109,24 @@ ke adverse selection.
 **VERDICT: scalp DEFINITIVELY DEAD. Phase A (engine) TIDAK dibangun buat duit** (no edge =
 mesin rugi rapih). Infra (data/signal/gate/conditioning) reusable kalau ada ide edge beneran
 beda. **Lane = discretionary swing.** $0 spent total. STOP — jangan grind hantu.
+
+---
+
+## ❌ MEME/ALT TEST (2026-05-27) — "coba koin lain" → masih dead
+
+Worm push: edge mungkin ada di koin kurang efisien (meme/alt), bukan cuma BTC. Valid → ditest.
+1000PEPE/1000BONK/WIF/DOGE, 120d 1m, cost spread real per-koin:
+
+| coin | spread | mean-rev GROSS | net taker | net maker | momentum gross |
+|---|---|---|---|---|---|
+| BTC (ref) | ~0 | +0.6bp | — | — | neg |
+| 1000PEPE | 0.3bp | +0.98 | −7.3 | −5.0 | −1.5 |
+| 1000BONK | 1.7bp | +1.04 | −8.7 | −5.6 | −0.55 |
+| WIF | 5.2bp | +1.56 | −11.6 | −6.8 | −0.66 |
+| DOGE | 1.0bp | +1.24 | −7.8 | −5.1 | −1.59 |
+
+**Temuan:** meme/alt mean-rev gross ~2× BTC (1.0-1.6bp) — intuisi "less efficient = more edge"
+BENAR. TAPI masih 3-7× < cost (8-14bp); net −5..−12bp semua. Koin edge-terbesar (WIF) spread
+terlebar → net terburuk (edge↑ cost↑ lebih cepat). Momentum NEGATIF gross di meme (burst revert).
+**Definitif (8 koin, 3 famili, multi-TF, conditioning): rule-based 1m scalp dead across-the-board.**
+Sisa "scalp meme" = event-driven (listing/liq/social) = discretionary, bukan algo.

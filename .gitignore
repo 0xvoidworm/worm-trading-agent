@@ -8,6 +8,8 @@ env/
 htmlcov/
 data/market.duckdb
 data/market.duckdb.*
+data/scalp_1m.duckdb
+data/scalp_1m.duckdb.*
 data/*.log
 data/*.log.bg
 data/*.killswitch

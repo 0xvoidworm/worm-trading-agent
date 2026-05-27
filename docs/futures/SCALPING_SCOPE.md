@@ -67,3 +67,25 @@ Defer ke eksperimen live-only nanti kalau ada famili lain yang lolos.
 Risk ≤5% modal/trade · lev 2-3x · tiap entry SL keras + TP + R:R jelas · daily-loss-limit +
 permanent-floor killswitch · no revenge / no add-to-loser. Scalp = banyak trade kecil →
 disiplin cut + cap jumlah trade/hari ekstra penting.
+
+---
+
+## VERDICT (P3, 2026-05-27) — ❌ REJECTED
+
+Backtest gate `data_pipe/scalp_backtest.py` (intrabar SL/TP, SL-first konservatif, validity
+guard, no-lookahead, cost taker/maker, walk-forward). BTC+ETH 180d.
+
+| Famili (1m) | Gross EV/trade | Net @maker-both 3.6bp | Verdict |
+|---|---|---|---|
+| mean_reversion | +0.6bp (PF 1.1, eq×1.6) | −3.0bp | ❌ arah real (win 57-58%) tapi ~6× kekecilan |
+| momentum_burst | negatif | −10bp | ❌ mati |
+| vol_breakout | negatif (win 9.5%) | −10bp | ❌ mesin fakeout |
+
+**Higher-TF (5m/15m/1h):** gross edge GAK scale — BTC 15m best +1.3bp (msh < cost),
+ETH NEGATIF di TF tinggi (mean-rev = noise mikrostruktur, ilang pas TF naik). **Gak ada TF
+di mana edge > cost.** Best case mana pun: BTC 15m maker-both −2.3bp/trade.
+
+**Kesimpulan:** rule-based scalp/mean-rev di OHLCV = NO survivable edge @ retail cost. Cost
+FIXED per trade → retail butuh move gede/frekuensi rendah (kebalikan scalp). **Lane kebukti =
+discretionary swing** (BTC#1 +$2.14, ~280bp move, cost trivial). $0 risk spent — gate kerja,
+no phantom. Infra (data+signal+gate) reusable. **P4 (paper→live) MOOT** — gate reject.

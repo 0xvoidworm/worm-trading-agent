@@ -11,6 +11,7 @@ data/market.duckdb.*
 data/*.log
 data/*.log.bg
 data/*.killswitch
+data/charts/
 # Runtime state files (per-session, NOT code)
 data/*.latest.json
 data/*.state.json

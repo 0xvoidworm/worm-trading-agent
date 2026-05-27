@@ -46,8 +46,9 @@ def _load_env() -> dict[str, str]:
 
 def get_bot_token() -> Optional[str]:
     env = _load_env()
-    # Reuse TIKTOK_BOT_TOKEN as the bot. Could be renamed but compatible.
-    return env.get("TIKTOK_BOT_TOKEN") or env.get("TELEGRAM_BOT_TOKEN")
+    # Prefer bot trading DEDICATED (TELEGRAM_BOT_TOKEN = @wantrax665_bot) biar alert +
+    # command control di bot yg SAMA (bisa reply /go di bawah alert). Fallback TikTok bot.
+    return env.get("TELEGRAM_BOT_TOKEN") or env.get("TIKTOK_BOT_TOKEN")
 
 
 def get_chat_id() -> Optional[str]:

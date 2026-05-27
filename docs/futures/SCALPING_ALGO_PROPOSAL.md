@@ -86,3 +86,26 @@ B1  conditioning test (split via gate)  → [DECISION: lolos cost-bar? → C : s
 - **Gas B dulu** (conditioning hunt) — jawab "ada edge gak?" sebelum capek bangun engine.
 - (Gua condong **B1 dulu** sebenernya — kalo conditioning gagal, engine-nya gak akan pernah bawa
   duit, jadi jawab pertanyaan edge duluan lebih hemat. Tapi A kasih sesuatu yang jalan & reusable.)
+
+---
+
+## ❌ B1 RESULT (2026-05-27) — conditioning GAGAL → STOP
+
+Tes conditioning mean-rev (z=2.5) BTC, cost maker 6.8bp, split via gate:
+
+| Kondisi | gross bps/trade |
+|---|---|
+| BASE | +0.63 |
+| vol low / mid / high | +0.43 / +0.79 / +0.63 |
+| ranging / mid / trending | +0.72 / +0.50 / +0.73 |
+| Asia / EU / US | +0.33 / +0.54 / +1.05 |
+| **hivol+ranging (best combo)** | **+1.16** (n=396) |
+
+**Edge uniform mungil ~0.3-1.2bp di SEMUA kondisi — gak ada sub-rezim yang nembus cost bar
+(~4-8bp). Gap ~5-10×, bukan tuning.** Net after cost −5.6..−6.5bp di mana pun. Best combo
+(+1.16bp) kemungkinan noise (n kecil). Maker-only/order-flow gak akan nutup gap segini + mati
+ke adverse selection.
+
+**VERDICT: scalp DEFINITIVELY DEAD. Phase A (engine) TIDAK dibangun buat duit** (no edge =
+mesin rugi rapih). Infra (data/signal/gate/conditioning) reusable kalau ada ide edge beneran
+beda. **Lane = discretionary swing.** $0 spent total. STOP — jangan grind hantu.

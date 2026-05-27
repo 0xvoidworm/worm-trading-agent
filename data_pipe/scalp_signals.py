@@ -66,6 +66,7 @@ class MeanReversionParams:
     z_entry: float = 2.5        # |z| > z_entry → fade
     sl_atr: float = 1.0
     tp_to_mean: bool = True     # TP = rolling mean (revert penuh); else rr-based
+    rr: float = 1.0             # dipakai kalau tp_to_mean=False
 
 
 @dataclass
@@ -168,23 +169,74 @@ def momentum_burst(df: pd.DataFrame, symbol: str,
 
 def mean_reversion(df: pd.DataFrame, symbol: str,
                    p: MeanReversionParams = MeanReversionParams()) -> pd.DataFrame:
-    """[STUB P2-next] Fade ekstrem: z = (close − rollmean)/rollstd @ close t.
-    |z| > z_entry → fade (z>0 SHORT, z<0 LONG). Entry open t+1.
-    SL = entry ∓ sl_atr·ATR ; TP = rolling mean (revert) atau rr-based.
-    Risiko: mean-rev 1m crypto = noise microstructure; gampang ketipu trend (z stretch terus).
-    Butuh: regime/trend filter? half-life check? → eksplor di build.
+    """Fade ekstrem: z = (close − rollmean)/rollstd @ close t. |z| > z_entry → fade.
+    z>0 (stretched UP) → SHORT, z<0 (stretched DOWN) → LONG. Entry open t+1.
+    SL = entry ∓ sl_atr·ATR. TP = rolling mean @t (revert) kalau tp_to_mean, else rr-based.
+    Catatan: rawan ketipu trend (z stretch terus searah) — kandidat regime/trend filter di P3.
     """
-    raise NotImplementedError("mean_reversion: diisi P2 build session berikutnya")
+    d = add_features(df, p.atr_window, vol_window=p.z_window)
+    roll_mean = d["close"].rolling(p.z_window).mean()
+    roll_std = d["close"].rolling(p.z_window).std()
+    z = (d["close"] - roll_mean) / roll_std
+    valid = d["atr"].notna() & (roll_std > 0) & d["open_next"].notna()
+    short = (z > p.z_entry) & valid
+    long_ = (z < -p.z_entry) & valid
+    mask = short | long_
+    sig = d[mask].copy()
+    if sig.empty:
+        return _empty_signals()
+    is_long = long_[mask].to_numpy()
+    sig["direction"] = np.where(is_long, "LONG", "SHORT")
+    sig["entry_price"] = sig["open_next"]
+    sl_dist = p.sl_atr * sig["atr"]
+    sig["sl"] = np.where(is_long, sig["entry_price"] - sl_dist, sig["entry_price"] + sl_dist)
+    if p.tp_to_mean:
+        sig["tp"] = roll_mean[mask].to_numpy()
+    else:
+        sig["tp"] = np.where(is_long, sig["entry_price"] + p.rr * sl_dist,
+                             sig["entry_price"] - p.rr * sl_dist)
+    sig["score"] = z[mask].abs().round(2)
+    sig["symbol"] = symbol
+    sig["family"] = "MEAN_REVERSION"
+    sig["thesis"] = ("meanrev z=" + str(p.z_entry)
+                     + (" tp=mean" if p.tp_to_mean else " rr=" + str(p.rr)))
+    return sig[SIGNAL_COLUMNS].reset_index(drop=True)
 
 
 def vol_breakout(df: pd.DataFrame, symbol: str,
                  p: VolBreakoutParams = VolBreakoutParams()) -> pd.DataFrame:
-    """[STUB P2-next] Range expansion: close break max(high,N)/min(low,N) SETELAH squeeze
-    (ATR < persentil squeeze_pct atas lookback). Break atas → LONG, bawah → SHORT.
-    Entry open t+1. SL = sisi seberang level / ATR ; TP = rr-based.
-    Risiko: false breakout (fakeout) = musuh utama; squeeze-gate buat saring.
+    """Range expansion: close break max(high,N)/min(low,N) bar SEBELUMNYA, SETELAH squeeze
+    (ATR @t ≤ persentil squeeze_pct atas squeeze_lookback = regime low-vol).
+    Break atas → LONG, bawah → SHORT. Entry open t+1. SL = entry ∓ sl_atr·ATR, TP rr-based.
+    Catatan: musuh = fakeout; squeeze-gate nyaring. Level break pakai shift(1) (no-lookahead).
     """
-    raise NotImplementedError("vol_breakout: diisi P2 build session berikutnya")
+    d = add_features(df, p.atr_window)
+    prior_high = d["high"].rolling(p.breakout_window).max().shift(1)
+    prior_low = d["low"].rolling(p.breakout_window).min().shift(1)
+    atr_thresh = d["atr"].rolling(p.squeeze_lookback).quantile(p.squeeze_pct)
+    squeeze = d["atr"] <= atr_thresh
+    valid = d["atr"].notna() & prior_high.notna() & atr_thresh.notna() & d["open_next"].notna()
+    up = (d["close"] > prior_high) & squeeze & valid
+    dn = (d["close"] < prior_low) & squeeze & valid
+    mask = up | dn
+    sig = d[mask].copy()
+    if sig.empty:
+        return _empty_signals()
+    is_long = up[mask].to_numpy()
+    sig["direction"] = np.where(is_long, "LONG", "SHORT")
+    sig["entry_price"] = sig["open_next"]
+    sl_dist = p.sl_atr * sig["atr"]
+    sig["sl"] = np.where(is_long, sig["entry_price"] - sl_dist, sig["entry_price"] + sl_dist)
+    sig["tp"] = np.where(is_long, sig["entry_price"] + p.rr * sl_dist,
+                         sig["entry_price"] - p.rr * sl_dist)
+    brk = np.where(is_long, sig["close"].to_numpy() - prior_high[mask].to_numpy(),
+                   prior_low[mask].to_numpy() - sig["close"].to_numpy())
+    sig["score"] = (brk / sig["atr"]).round(2)
+    sig["symbol"] = symbol
+    sig["family"] = "VOL_BREAKOUT"
+    sig["thesis"] = ("breakout N=" + str(p.breakout_window) + " sqz=" + str(p.squeeze_pct)
+                     + " rr=" + str(p.rr))
+    return sig[SIGNAL_COLUMNS].reset_index(drop=True)
 
 
 # ─── sanity peek (SMELL TEST, BUKAN backtest gate P3) ────────────────────────

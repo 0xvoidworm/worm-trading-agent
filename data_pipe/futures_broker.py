@@ -33,7 +33,7 @@ import ccxt
 from .brokers import DEFAULT_SECRETS_PATH, load_binance_credentials
 
 
-SAFETY_MAX_LEVERAGE = 5          # hard ceiling broker-level (strategy pakai 2x)
+SAFETY_MAX_LEVERAGE = 10         # bumped 5→10 (2026-05-28, experiment E1 — Worm consent)
 DEFAULT_MARGIN_MODE = "ISOLATED"
 
 

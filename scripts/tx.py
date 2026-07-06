@@ -97,6 +97,24 @@ def _broker() -> BinanceFuturesBroker:
     return b
 
 
+def _require_live_arm(args, action: str) -> None:
+    """Block money-moving entry commands unless the operator freshly arms live.
+
+    `TX_LIVE_ARM=1` is accepted for scripted/terminal workflows. For CLI muscle
+    memory, `--live --confirm LIVE` is explicit and auditable in shell history.
+    """
+    if os.environ.get("TX_LIVE_ARM") == "1":
+        return
+    if getattr(args, "live", False) and getattr(args, "confirm", "") == "LIVE":
+        return
+    print(
+        f"{action}: BLOCKED live futures command. Use --live --confirm LIVE "
+        "or export TX_LIVE_ARM=1 after explicit re-arm.",
+        file=sys.stderr,
+    )
+    sys.exit(3)
+
+
 # ─── Commands ───────────────────────────────────────────────────────────
 
 def cmd_status(args):
@@ -270,6 +288,10 @@ def _risk_preflight(b: BinanceFuturesBroker, sym: str, qty: float, entry: float,
 
 
 def cmd_open(args):
+    _require_live_arm(args, "open")
+    if args.sl is None and not args.force:
+        print("open: BLOCKED naked entry — --sl required unless --force", file=sys.stderr)
+        sys.exit(3)
     b = _broker()
     sym = sym_full(args.symbol)
     side = side_open(args.side)
@@ -312,6 +334,10 @@ def cmd_open(args):
         sl_ord = b.place_reduce_trigger(sym, close_side, qty, args.sl, "STOP")
         sl_id = sl_ord.order_id if sl_ord.success else None
         print(f"  SL @ ${args.sl}: success={sl_ord.success} id={sl_id}")
+        if not sl_ord.success:
+            close = b.place_market_order(sym, close_side, qty, reduce_only=True)
+            print(f"  NAKED GUARD: SL failed; close={'OK' if close.success else close.error}", file=sys.stderr)
+            sys.exit(4)
     if args.tp:
         tp_ord = b.place_reduce_trigger(sym, close_side, qty, args.tp, "TP")
         tp_id = tp_ord.order_id if tp_ord.success else None
@@ -605,7 +631,9 @@ def build_parser():
     s.add_argument("--tp", type=float, help="take-profit price")
     s.add_argument("--lev", type=int, help="set leverage (5x default account)")
     s.add_argument("--risk", type=float, help="auto-size: risk %% of wallet (needs --sl)")
-    s.add_argument("--force", action="store_true", help="bypass risk preflight")
+    s.add_argument("--force", action="store_true", help="bypass risk preflight / naked-entry block")
+    s.add_argument("--live", action="store_true", help="explicit live arm component (requires --confirm LIVE)")
+    s.add_argument("--confirm", default="", help="must be LIVE for money-moving open")
     _add_json(s); s.set_defaults(func=cmd_open)
 
     s = sub.add_parser("close", help="market close + ORPHAN cleanup all triggers")

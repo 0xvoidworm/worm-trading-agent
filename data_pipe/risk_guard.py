@@ -93,16 +93,38 @@ def get_realized_pnl_today(
     return float(row[0]) if row else 0.0
 
 
+def _live_price(exchange: str, pair: str) -> Optional[float]:
+    """Best-effort public ticker/mark price for risk gating. No secrets.
+
+    Fallback remains the stored OHLCV close so offline/test environments keep
+    functioning; production can set portfolio.risk_price_source=live to avoid
+    stale candle prices in daily-loss killswitch decisions.
+    """
+    try:
+        import ccxt  # type: ignore
+        ex_cls = getattr(ccxt, exchange)
+        ex = ex_cls({"enableRateLimit": True, "timeout": 8000})
+        t = ex.fetch_ticker(pair)
+        info = t.get("info") or {}
+        px = info.get("markPrice") or t.get("last") or t.get("close")
+        return float(px) if px is not None else None
+    except Exception:
+        return None
+
+
 def get_unrealized_pnl_now(storage: Storage, cfg: dict) -> float:
     """SUM mark-to-market PnL atas OPEN trades, exclude test artifact.
 
     PnL per trade = (latest_close - entry) × size × side
     side: LONG=+1, SHORT=-1. PAIR / entry_price NULL di-skip.
 
-    Latest close di-resolve via cfg.exchange + cfg.timeframe.
+    Production risk can use live public ticker via portfolio.risk_price_source=live;
+    fallback is latest stored OHLCV close.
     """
     exchange = cfg.get("exchange", "bybit")
     tf = cfg.get("timeframe", "1h")
+    pcfg = _portfolio_cfg(cfg)
+    use_live_price = str(pcfg.get("risk_price_source", "ohlcv")).lower() == "live"
     rows = storage._conn.execute(
         "SELECT pair, direction, entry_price, size FROM trade_journal "
         "WHERE status='OPEN' AND direction IN ('LONG','SHORT') "
@@ -115,15 +137,17 @@ def get_unrealized_pnl_now(storage: Storage, cfg: dict) -> float:
 
     total = 0.0
     for pair, direction, entry, size in rows:
-        close_row = storage._conn.execute(
-            "SELECT close FROM ohlcv "
-            "WHERE exchange=? AND symbol=? AND timeframe=? "
-            "ORDER BY ts DESC LIMIT 1",
-            [exchange, str(pair), tf],
-        ).fetchone()
-        if close_row is None or close_row[0] is None:
-            continue
-        last = float(close_row[0])
+        last = _live_price(exchange, str(pair)) if use_live_price else None
+        if last is None:
+            close_row = storage._conn.execute(
+                "SELECT close FROM ohlcv "
+                "WHERE exchange=? AND symbol=? AND timeframe=? "
+                "ORDER BY ts DESC LIMIT 1",
+                [exchange, str(pair), tf],
+            ).fetchone()
+            if close_row is None or close_row[0] is None:
+                continue
+            last = float(close_row[0])
         side = 1.0 if direction == "LONG" else -1.0
         total += (last - float(entry)) * float(size) * side
     return total

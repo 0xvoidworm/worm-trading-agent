@@ -9,6 +9,7 @@ status(): snapshot posisi + trigger orders buat babysit.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from typing import Optional
 
 from data_pipe.futures_broker import make_futures_broker
@@ -30,6 +31,8 @@ def open_protected(
     price_band: Optional[tuple] = None, min_bal: float = 10.0, note: str = "",
 ) -> ExecResult:
     """Buka posisi + proteksi. side='sell'(SHORT)/'buy'(LONG). sl/tp = harga absolut."""
+    if live and os.environ.get("TX_LIVE_ARM") != "1":
+        return ExecResult(False, "LIVE blocked: set TX_LIVE_ARM=1 only after explicit re-arm")
     br = make_futures_broker(live=live)
     close_side = "buy" if side == "sell" else "sell"
 
@@ -54,11 +57,22 @@ def open_protected(
     if not o.success:
         return ExecResult(False, f"open gagal: {o.error}")
     sl_r = br.place_reduce_trigger(symbol, close_side, amount, sl, "STOP")
+    if not sl_r.success:
+        # Naked guard: if mandatory SL cannot attach, flatten immediately.
+        close = br.place_market_order(symbol, close_side, amount, reduce_only=True)
+        return ExecResult(
+            False,
+            f"SL attach gagal ({sl_r.error}); naked guard close={'OK' if close.success else close.error}",
+            o.avg_fill_price, "", "", False,
+        )
     tp_r = br.place_reduce_trigger(symbol, close_side, amount, tp, "TP")
 
-    # VERIFY proteksi beneran nyangkut (conditional orders perlu stop=True)
+    # VERIFY proteksi beneran nyangkut by returned IDs, not just trigger count.
     trig = br.fetch_trigger_orders(symbol)
-    protected = len(trig) >= 2
+    ids = {str(t.get("id")) for t in trig}
+    sl_alive = bool(sl_r.order_id) and str(sl_r.order_id) in ids
+    tp_alive = bool(tp_r.order_id) and str(tp_r.order_id) in ids
+    protected = sl_alive and tp_alive
     dir_ = "SHORT" if side == "sell" else "LONG"
 
     try:

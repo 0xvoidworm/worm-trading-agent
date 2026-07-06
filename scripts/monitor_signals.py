@@ -98,8 +98,13 @@ def classify_band(z: float, threshold: float) -> str:
 def _run_auto_trade_cycle(threshold: float) -> None:
     """Phase 4 auto-trade: invoke auto_trader.run_auto_cycle.
 
-    Imported lazily to avoid circular dep at module load.
+    Money-moving path: unit files may exist while disabled, so require a fresh
+    runtime arm before any live auto-trade can execute.
     """
+    import os
+    if os.environ.get("AUTO_TRADE_ARM") != "1":
+        log_alert("[auto_trade] BLOCKED — set AUTO_TRADE_ARM=1 only after explicit live re-arm")
+        return
     import yaml
     from pathlib import Path as _Path
     from data_pipe.auto_trader import run_auto_cycle

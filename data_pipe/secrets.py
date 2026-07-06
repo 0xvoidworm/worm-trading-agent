@@ -34,9 +34,17 @@ def _load() -> dict:
 
 
 def get(key: str, default: str | None = None) -> str | None:
-    """Ambil value: .env dulu, fallback ke os.environ, fallback ke default."""
+    """Ambil value: .env dulu, fallback ke os.environ, fallback ke default.
+
+    Use explicit key presence instead of `or` so intentional values like "0"
+    or an empty override are not silently replaced by another source.
+    """
     env = _load()
-    return env.get(key) or os.environ.get(key) or default
+    if key in env:
+        return env[key]
+    if key in os.environ:
+        return os.environ[key]
+    return default
 
 
 def require(key: str) -> str:

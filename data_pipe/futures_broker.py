@@ -33,7 +33,7 @@ import ccxt
 from .brokers import DEFAULT_SECRETS_PATH, load_binance_credentials
 
 
-SAFETY_MAX_LEVERAGE = 10         # bumped 5→10 (2026-05-28, experiment E1 — Worm consent)
+SAFETY_MAX_LEVERAGE = 5          # parked 2026-07-06: backstop restored after E1
 DEFAULT_MARGIN_MODE = "ISOLATED"
 
 
@@ -244,8 +244,9 @@ class BinanceFuturesBroker:
         self._ensure_markets()
         if self.get_multi_assets_mode():
             if mode.upper() == "ISOLATED":
-                print("[margin] Multi-Assets Mode ON → margin cross-shared, ISOLATED "
-                      "unavailable. OK — risk dikontrol SL, bukan ring-fence margin.")
+                print("[margin] Multi-Assets Mode ON → ISOLATED unavailable; refusing "
+                      "autonomous/live entry to avoid cross-shared margin drift.")
+                return False
             return True
         try:
             self._ex.set_margin_mode(mode.lower(), symbol)

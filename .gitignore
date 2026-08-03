@@ -28,3 +28,17 @@ data/TEST_ARTIFACTS.md
 .env
 .env.*
 *.session
+*.env
+secrets.local.*
+*.key
+*.pem
+.secrets/
+
+# Local operator backups (not source/tests)
+backups/
+
+# Worm operator backups (auto-generated, do not commit)
+*.bak-*
+.worm-state.md
+*.bak-pathfix-*
+*.bak-controlplane-*

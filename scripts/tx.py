@@ -31,7 +31,12 @@ from typing import Optional
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT))
 
-from data_pipe.futures_broker import BinanceFuturesBroker  # noqa: E402
+from data_pipe.futures_broker import (  # noqa: E402
+    DEFAULT_MARGIN_MODE,
+    LIVE_MAX_RISK_PCT,
+    BinanceFuturesBroker,
+    LivePreflightError,
+)
 
 LOG_DIR = Path.home() / ".txec"
 LOG_FILE = LOG_DIR / "session.jsonl"
@@ -244,10 +249,14 @@ def cmd_size(args):
     # snap to step
     mf = b.get_market_filters(sym)
     step = mf["step_size"]
+    if step <= 0:
+        print(f"error: invalid amount step for {sym}: {step}", file=sys.stderr)
+        sys.exit(1)
     qty = (raw_qty // step) * step
     if qty < mf["min_qty"]:
         qty = mf["min_qty"]
     notional = qty * args.entry
+    feasible = b.check_order_feasible(sym, qty, args.entry)
     margin = notional / args.lev
     actual_risk = qty * sl_dist
     actual_risk_pct = actual_risk / wallet * 100
@@ -257,6 +266,7 @@ def cmd_size(args):
         "raw_qty": raw_qty, "qty_snapped": qty,
         "notional": notional, "margin_at_lev": margin, "lev": args.lev,
         "actual_risk_usd": actual_risk, "actual_risk_pct": actual_risk_pct,
+        "feasible": feasible is None, "feasibility_error": feasible,
     }
     if args.tp:
         reward = qty * abs(args.tp - args.entry)
@@ -268,57 +278,103 @@ def cmd_size(args):
     print(f"  entry=${args.entry}  SL=${args.sl}  dist=${sl_dist:.4f}")
     print(f"  qty={qty} (raw {raw_qty:.3f}, step {step})  notional=${notional:.2f}  margin@{args.lev}x=${margin:.2f}")
     print(f"  actual_risk=${actual_risk:.2f} ({actual_risk_pct:.2f}%)")
+    if feasible:
+        print(f"  NOT EXECUTABLE: {feasible}")
     if args.tp:
         print(f"  TP=${args.tp}  reward=${out['reward_usd']:.2f}  R/R 1:{out['rr']:.2f}")
 
 
 def _risk_preflight(b: BinanceFuturesBroker, sym: str, qty: float, entry: float,
                     sl: Optional[float], force: bool) -> Optional[str]:
-    """Return warning string if risk exceeds policy. None if OK."""
+    """Return warning string if risk exceeds the hard live-pilot policy."""
     if sl is None:
         return None
     bal = b.fetch_futures_balance()
     wallet = bal["total"]
+    if wallet <= 0:
+        return "RISK PREFLIGHT: futures wallet is empty"
     new_risk = qty * abs(entry - sl)
     new_pct = new_risk / wallet * 100
-    if new_pct > 15 and not force:
+    if new_pct > LIVE_MAX_RISK_PCT:
         return (f"RISK PREFLIGHT: planned risk ${new_risk:.2f} = "
-                f"{new_pct:.1f}% wallet (>15%). Use --force to override.")
+                f"{new_pct:.4g}% wallet > hard live-pilot ceiling "
+                f"{LIVE_MAX_RISK_PCT:.4g}%. --force cannot bypass.")
     return None
 
 
 def cmd_open(args):
     _require_live_arm(args, "open")
-    if args.sl is None and not args.force:
-        print("open: BLOCKED naked entry — --sl required unless --force", file=sys.stderr)
+    if args.sl is None:
+        print("open: BLOCKED naked entry — hard SL is mandatory", file=sys.stderr)
         sys.exit(3)
+    if args.tp is None:
+        print("open: BLOCKED unbracketed entry — reduce-only TP is mandatory", file=sys.stderr)
+        sys.exit(3)
+    if args.risk is None:
+        print(
+            f"open: BLOCKED — use --risk with a maximum of {LIVE_MAX_RISK_PCT}%; "
+            "explicit --qty entries are disabled for the live pilot.",
+            file=sys.stderr,
+        )
+        sys.exit(3)
+    if args.risk <= 0 or args.risk > LIVE_MAX_RISK_PCT:
+        print(
+            f"open: BLOCKED risk={args.risk}% — allowed live-pilot range is "
+            f"(0, {LIVE_MAX_RISK_PCT}%].",
+            file=sys.stderr,
+        )
+        sys.exit(3)
+
     b = _broker()
     sym = sym_full(args.symbol)
     side = side_open(args.side)
     qty = args.qty
 
-    # set leverage if specified
-    if args.lev:
-        b.set_leverage(sym, args.lev)
+    try:
+        api_preflight = b.assert_live_entry_ready(args.risk)
+    except LivePreflightError as e:
+        print(f"open: BLOCKED API/account preflight — {e}", file=sys.stderr)
+        sys.exit(3)
+
+    leverage = args.lev or 2
+    if leverage not in (1, 2):
+        print("open: BLOCKED — live pilot leverage must be 1x or 2x", file=sys.stderr)
+        sys.exit(3)
+    if not b.set_margin_mode(sym, DEFAULT_MARGIN_MODE):
+        print(f"open: BLOCKED — could not enforce {DEFAULT_MARGIN_MODE} margin", file=sys.stderr)
+        sys.exit(3)
+    if not b.set_leverage(sym, leverage):
+        print(f"open: BLOCKED — could not set leverage={leverage}x", file=sys.stderr)
+        sys.exit(3)
 
     mark = b.fetch_mark_price(sym)
 
-    # auto-size from risk if --risk given and no qty (or qty=0)
-    if (qty is None or qty <= 0) and args.risk and args.sl:
-        bal = b.fetch_futures_balance()
-        sl_dist = abs(mark - args.sl)
-        risk_dollar = bal["total"] * args.risk / 100
-        raw_qty = risk_dollar / sl_dist
-        mf = b.get_market_filters(sym)
-        step = mf["step_size"]
-        qty = max((raw_qty // step) * step, mf["min_qty"])
-
-    if not qty:
-        print("error: --qty or (--risk + --sl) required", file=sys.stderr); sys.exit(1)
+    # Always derive quantity from the current futures wallet and hard stop.
+    bal = b.fetch_futures_balance()
+    sl_dist = abs(mark - args.sl)
+    if sl_dist <= 0:
+        print("open: BLOCKED — mark and SL distance is zero", file=sys.stderr)
+        sys.exit(3)
+    risk_dollar = bal["total"] * args.risk / 100
+    raw_qty = risk_dollar / sl_dist
+    mf = b.get_market_filters(sym)
+    step = mf["step_size"]
+    if step <= 0:
+        print(f"open: BLOCKED — invalid amount step for {sym}: {step}", file=sys.stderr)
+        sys.exit(3)
+    qty = max((raw_qty // step) * step, mf["min_qty"])
 
     warn = _risk_preflight(b, sym, qty, mark, args.sl, args.force)
     if warn:
         print(warn, file=sys.stderr); sys.exit(2)
+    feasible = b.check_order_feasible(sym, qty, mark)
+    if feasible:
+        print(
+            f"open: BLOCKED — {feasible}. Increase risk within the "
+            f"{LIVE_MAX_RISK_PCT}% ceiling or skip this ticket.",
+            file=sys.stderr,
+        )
+        sys.exit(3)
 
     bal_before = b.fetch_futures_balance()
 
@@ -346,13 +402,15 @@ def cmd_open(args):
     bal_after = b.fetch_futures_balance()
     log_event("open", symbol=sym, side=side.upper(), qty=qty,
               entry_avg=entry.avg_fill_price, sl=args.sl, tp=args.tp,
-              lev=args.lev, sl_id=sl_id, tp_id=tp_id,
+              lev=leverage, risk_pct=args.risk, api_preflight=api_preflight,
+              sl_id=sl_id, tp_id=tp_id,
               wallet_before=bal_before, wallet_after=bal_after)
     print(f"  wallet: ${bal_before['total']:.2f} → ${bal_after['total']:.2f}")
 
 
 def cmd_close(args):
     """Market-close position + cancel ALL triggers for symbol (orphan cleanup)."""
+    _require_live_arm(args, "close")
     b = _broker()
     sym = sym_full(args.symbol)
     positions = b.fetch_positions(sym)
@@ -393,6 +451,7 @@ def cmd_close(args):
 
 def cmd_cancel(args):
     """Cancel triggers — specific id or ALL for symbol."""
+    _require_live_arm(args, "cancel")
     b = _broker()
     sym = sym_full(args.symbol)
     if args.id:
@@ -413,6 +472,7 @@ def cmd_cancel(args):
 
 def cmd_trail(args):
     """Trail SL: cancel existing STOP_MARKET, place new at given price."""
+    _require_live_arm(args, "trail")
     b = _broker()
     sym = sym_full(args.symbol)
     positions = b.fetch_positions(sym)
@@ -614,40 +674,46 @@ def build_parser():
                    help="min 24h vol in M USDT")
     _add_json(s); s.set_defaults(func=cmd_scan)
 
-    s = sub.add_parser("size", help="compute qty from entry/SL/risk%")
+    s = sub.add_parser("size", help="compute qty from entry/SL/risk%%")
     s.add_argument("symbol")
     s.add_argument("--entry", type=float, required=True)
     s.add_argument("--sl", type=float, required=True)
-    s.add_argument("--risk", type=float, default=5.0, help="risk %% of wallet")
-    s.add_argument("--lev", type=int, default=5)
+    s.add_argument("--risk", type=float, default=0.5, help="risk %% of live futures wallet")
+    s.add_argument("--lev", type=int, default=2)
     s.add_argument("--tp", type=float, help="optional TP for R/R calc")
     _add_json(s); s.set_defaults(func=cmd_size)
 
     s = sub.add_parser("open", help="market entry + brackets")
     s.add_argument("symbol")
     s.add_argument("side", choices=["long","short","buy","sell"])
-    s.add_argument("--qty", type=float, help="explicit qty (or use --risk)")
-    s.add_argument("--sl", type=float, help="stop-loss price")
-    s.add_argument("--tp", type=float, help="take-profit price")
-    s.add_argument("--lev", type=int, help="set leverage (5x default account)")
-    s.add_argument("--risk", type=float, help="auto-size: risk %% of wallet (needs --sl)")
-    s.add_argument("--force", action="store_true", help="bypass risk preflight / naked-entry block")
+    s.add_argument("--qty", type=float, help="deprecated for entries; live pilot always auto-sizes from --risk")
+    s.add_argument("--sl", type=float, help="mandatory hard stop-loss price")
+    s.add_argument("--tp", type=float, help="mandatory reduce-only take-profit price")
+    s.add_argument("--lev", type=int, default=2, help="live pilot leverage: 1x or 2x")
+    s.add_argument("--risk", type=float, help=f"risk %% of live futures wallet; max {LIVE_MAX_RISK_PCT}%%")
+    s.add_argument("--force", action="store_true", help="legacy flag; cannot bypass hard live-pilot limits")
     s.add_argument("--live", action="store_true", help="explicit live arm component (requires --confirm LIVE)")
     s.add_argument("--confirm", default="", help="must be LIVE for money-moving open")
     _add_json(s); s.set_defaults(func=cmd_open)
 
     s = sub.add_parser("close", help="market close + ORPHAN cleanup all triggers")
     s.add_argument("symbol")
+    s.add_argument("--live", action="store_true", help="explicit live arm component (requires --confirm LIVE)")
+    s.add_argument("--confirm", default="", help="must be LIVE for money-moving close")
     _add_json(s); s.set_defaults(func=cmd_close)
 
     s = sub.add_parser("cancel", help="cancel triggers (specific id or all for symbol)")
     s.add_argument("symbol")
     s.add_argument("--id", help="specific order id; else cancel all triggers for symbol")
+    s.add_argument("--live", action="store_true", help="explicit live arm component (requires --confirm LIVE)")
+    s.add_argument("--confirm", default="", help="must be LIVE for order cancellation")
     _add_json(s); s.set_defaults(func=cmd_cancel)
 
     s = sub.add_parser("trail", help="move SL to new price (cancel old, place new)")
     s.add_argument("symbol")
     s.add_argument("price", type=float)
+    s.add_argument("--live", action="store_true", help="explicit live arm component (requires --confirm LIVE)")
+    s.add_argument("--confirm", default="", help="must be LIVE for stop mutation")
     _add_json(s); s.set_defaults(func=cmd_trail)
 
     s = sub.add_parser("log", help="recent session events")

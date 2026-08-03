@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 from typing import Optional, Protocol
 
@@ -35,6 +36,11 @@ from .brokers import DEFAULT_SECRETS_PATH, load_binance_credentials
 
 SAFETY_MAX_LEVERAGE = 5          # parked 2026-07-06: backstop restored after E1
 DEFAULT_MARGIN_MODE = "ISOLATED"
+LIVE_MAX_RISK_PCT = 0.5          # one-ticket pilot ceiling; --force must not bypass
+
+
+class LivePreflightError(RuntimeError):
+    """Live entry blocked because Binance account/key state is not hardened."""
 
 
 # ─── data types ────────────────────────────────────────────────────────────
@@ -109,6 +115,7 @@ class FuturesBroker(Protocol):
     def set_margin_mode(self, symbol: str, mode: str = DEFAULT_MARGIN_MODE) -> bool: ...
     def place_market_order(
         self, symbol: str, side: str, amount: float, reduce_only: bool = False,
+        client_order_id: Optional[str] = None,
     ) -> FuturesOrderResult: ...
     def fetch_positions(self, symbol: Optional[str] = None) -> list[FuturesPosition]: ...
     def fetch_funding(self, symbol: str) -> FundingInfo: ...
@@ -149,6 +156,86 @@ class BinanceFuturesBroker:
             "total": float(usdt.get("total") or 0.0),
             "free": float(usdt.get("free") or 0.0),
             "used": float(usdt.get("used") or 0.0),
+        }
+
+    def fetch_api_restrictions(self) -> dict:
+        """Binance API-key permissions, without exposing key/secret values."""
+        self._ensure_markets()
+        for name in ("sapiGetAccountApiRestrictions", "sapi_get_account_apirestrictions"):
+            fn = getattr(self._ex, name, None)
+            if fn:
+                return fn({})
+        raise RuntimeError("Binance API restriction endpoint unavailable in ccxt")
+
+    def fetch_account_trading_status(self) -> dict:
+        """Return Binance account lock/trading status."""
+        self._ensure_markets()
+        for name in ("sapiGetAccountApiTradingStatus", "sapi_get_account_apitradingstatus"):
+            fn = getattr(self._ex, name, None)
+            if fn:
+                return fn({})
+        raise RuntimeError("Binance account trading-status endpoint unavailable in ccxt")
+
+    def assert_live_entry_ready(self, requested_risk_pct: float) -> dict:
+        """Fail closed before opening risk.
+
+        Account-side API permissions can only be changed in Binance. This guard
+        makes the local executor refuse entries until the key is IP-restricted
+        and confirms that futures trading is enabled while withdrawals remain
+        disabled.
+        """
+        if requested_risk_pct <= 0:
+            raise LivePreflightError("risk_pct must be > 0")
+        if requested_risk_pct > LIVE_MAX_RISK_PCT:
+            raise LivePreflightError(
+                f"risk {requested_risk_pct:.4g}% > live pilot ceiling "
+                f"{LIVE_MAX_RISK_PCT:.4g}%"
+            )
+
+        restrictions = self.fetch_api_restrictions()
+        status = self.fetch_account_trading_status()
+        status_data = status.get("data") or {}
+        allow_unrestricted = os.environ.get("TX_ALLOW_UNRESTRICTED_API") == "1"
+        blockers: list[str] = []
+
+        if not restrictions.get("enableReading"):
+            blockers.append("API reading disabled")
+        if not restrictions.get("enableFutures"):
+            blockers.append("API futures permission disabled")
+        if restrictions.get("enableSpotAndMarginTrading"):
+            blockers.append(
+                "spot/margin trading enabled on the futures executor key"
+            )
+        if restrictions.get("enableWithdrawals"):
+            blockers.append("API withdrawals enabled")
+        if restrictions.get("enableMargin"):
+            blockers.append("API margin permission enabled")
+        if restrictions.get("enableInternalTransfer"):
+            blockers.append("API internal-transfer permission enabled")
+        if restrictions.get("permitsUniversalTransfer"):
+            blockers.append("API universal-transfer permission enabled")
+        if not restrictions.get("ipRestrict") and not allow_unrestricted:
+            blockers.append(
+                "API IP whitelist disabled; enable current stable egress IP in Binance"
+            )
+        if status_data.get("isLocked"):
+            blockers.append("Binance account trading status is locked")
+        if blockers:
+            raise LivePreflightError("; ".join(blockers))
+
+        return {
+            "ip_restrict": bool(restrictions.get("ipRestrict")),
+            "reading": bool(restrictions.get("enableReading")),
+            "futures": bool(restrictions.get("enableFutures")),
+            "spot_margin": bool(restrictions.get("enableSpotAndMarginTrading")),
+            "margin": bool(restrictions.get("enableMargin")),
+            "withdrawals": bool(restrictions.get("enableWithdrawals")),
+            "internal_transfer": bool(restrictions.get("enableInternalTransfer")),
+            "universal_transfer": bool(restrictions.get("permitsUniversalTransfer")),
+            "account_locked": bool(status_data.get("isLocked")),
+            "risk_pct": float(requested_risk_pct),
+            "risk_ceiling_pct": LIVE_MAX_RISK_PCT,
+            "unrestricted_api_override": allow_unrestricted,
         }
 
     def fetch_mark_price(self, symbol: str) -> float:
@@ -199,13 +286,25 @@ class BinanceFuturesBroker:
         return out
 
     def fetch_trigger_orders(self, symbol: Optional[str] = None) -> list:
-        """Conditional/trigger orders (SL/TP). Binance misahin dari open orders
-        biasa → WAJIB params stop=True (fetch_open_orders default gak nampilin)."""
+        """Conditional/trigger orders (SL/TP) from Binance's algo endpoint."""
         self._ensure_markets()
-        try:
-            return self._ex.fetch_open_orders(symbol, params={"stop": True})
-        except Exception:
-            return []
+        return self._ex.fetch_open_orders(symbol, params={"trigger": True})
+
+    def fetch_all_open_orders(self) -> dict[str, list]:
+        """All regular + conditional USDT-M Futures orders.
+
+        Uses Binance Futures raw endpoints intentionally: CCXT refuses a
+        symbol-less unified fetch unless a warning option is disabled.
+        """
+        self._ensure_markets()
+        regular = self._ex.fapiPrivateGetOpenOrders({})
+        conditional = self._ex.fapiPrivateGetOpenAlgoOrders({})
+        return {
+            "regular": regular if isinstance(regular, list) else [],
+            "conditional": (
+                conditional if isinstance(conditional, list) else []
+            ),
+        }
 
     def get_market_filters(self, symbol: str) -> dict:
         self._ensure_markets()
@@ -288,6 +387,7 @@ class BinanceFuturesBroker:
 
     def place_market_order(
         self, symbol: str, side: str, amount: float, reduce_only: bool = False,
+        client_order_id: Optional[str] = None,
     ) -> FuturesOrderResult:
         """LIVE market order. side='buy' (long/cover) | 'sell' (short/reduce-long).
 
@@ -304,6 +404,8 @@ class BinanceFuturesBroker:
                 return _fail_order(symbol, side, amount, reduce_only, f"pre-flight: {err}")
         try:
             params = {"reduceOnly": True} if reduce_only else {}
+            if client_order_id:
+                params["clientOrderId"] = str(client_order_id)
             order = self._ex.create_order(symbol, "market", side, float(amount), params=params)
         except Exception as e:
             return _fail_order(symbol, side, amount, reduce_only, f"{type(e).__name__}: {e}")
@@ -327,6 +429,7 @@ class BinanceFuturesBroker:
 
     def place_reduce_trigger(
         self, symbol: str, side: str, amount: float, stop_price: float, kind: str,
+        client_order_id: Optional[str] = None,
     ) -> FuturesOrderResult:
         """Pasang reduceOnly trigger order proteksi posisi.
 
@@ -336,9 +439,17 @@ class BinanceFuturesBroker:
         self._ensure_markets()
         otype = "STOP_MARKET" if kind.upper() == "STOP" else "TAKE_PROFIT_MARKET"
         try:
+            params = {
+                "triggerPrice": float(stop_price),
+                "reduceOnly": True,
+                "workingType": "MARK_PRICE",
+                "priceProtect": True,
+            }
+            if client_order_id:
+                params["clientAlgoId"] = str(client_order_id)
             order = self._ex.create_order(
                 symbol, otype, side.lower(), float(amount), None,
-                {"stopPrice": float(stop_price), "reduceOnly": True},
+                params,
             )
         except Exception as e:
             return _fail_order(symbol, side, amount, True, f"{kind}: {type(e).__name__}: {e}")
@@ -350,17 +461,79 @@ class BinanceFuturesBroker:
         )
 
     def cancel_order(self, symbol: str, order_id: str, conditional: bool = False) -> bool:
-        """Cancel satu order by id. SL/TP dari place_reduce_trigger = CONDITIONAL/algo
-        order Binance (algoId, subsystem terpisah) → set conditional=True biar ccxt route
-        ke endpoint algo (params stop=True). Kalau enggak → -2011 'Unknown order sent'
-        (endpoint order reguler gak kenal algoId). True = sukses."""
+        """Cancel one regular order or Binance conditional/algo order by ID."""
         self._ensure_markets()
         try:
-            self._ex.cancel_order(str(order_id), symbol, params={"stop": True} if conditional else {})
+            self._ex.cancel_order(
+                str(order_id),
+                symbol,
+                params={"trigger": True} if conditional else {},
+            )
             return True
         except Exception as e:
             print(f"[cancel] order {order_id} gagal: {type(e).__name__}: {str(e)[:140]}")
             return False
+
+    def fetch_order_by_client_id(
+        self,
+        symbol: str,
+        client_order_id: str,
+        conditional: bool = False,
+    ) -> Optional[dict]:
+        """Find a submitted order by deterministic client ID.
+
+        Used after network timeouts/restarts to resolve whether Binance accepted
+        the order before the controller considers any retry.
+        """
+        self._ensure_markets()
+        try:
+            return self._ex.fetch_order(
+                "",
+                symbol,
+                params=(
+                    {
+                        "clientAlgoId": str(client_order_id),
+                        "trigger": True,
+                    }
+                    if conditional
+                    else {"clientOrderId": str(client_order_id)}
+                ),
+            )
+        except Exception as e:
+            msg = str(e)
+            if "-2013" in msg or "Order does not exist" in msg or "Unknown order" in msg:
+                return None
+            raise
+
+    def fetch_trigger_execution(
+        self,
+        symbol: str,
+        client_order_id: str,
+    ) -> Optional[dict]:
+        """Resolve a conditional order to its actual executed futures order.
+
+        Binance's algo-order endpoint may expose ``actualOrderId`` after the
+        trigger fires. Query that regular order to obtain fill status, average,
+        and fees. If it has not fired yet, return the conditional order itself.
+        """
+        algo = self.fetch_order_by_client_id(
+            symbol, client_order_id, conditional=True,
+        )
+        if algo is None:
+            return None
+        info = algo.get("info") or {}
+        actual_id = (
+            info.get("actualOrderId")
+            or info.get("orderId")
+            or algo.get("actualOrderId")
+        )
+        if actual_id not in (None, "", 0, "0"):
+            try:
+                return self._ex.fetch_order(str(actual_id), symbol)
+            except Exception:
+                # The algo record is still useful for status reconciliation.
+                pass
+        return algo
 
     def cancel_all_orders(self, symbol: str) -> bool:
         """Cancel SEMUA open order symbol — REGULER + CONDITIONAL (SL/TP algo). True = full sukses.
@@ -376,7 +549,7 @@ class BinanceFuturesBroker:
                 print(f"[cancel] cancel_all reguler {symbol} gagal: {type(e).__name__}: {str(e)[:140]}")
                 ok = False
         try:
-            for o in self._ex.fetch_open_orders(symbol, params={"stop": True}):  # conditional/algo
+            for o in self._ex.fetch_open_orders(symbol, params={"trigger": True}):  # conditional/algo
                 if not self.cancel_order(symbol, o.get("id"), conditional=True):
                     ok = False
         except Exception as e:
@@ -394,19 +567,81 @@ class DryRunFuturesBroker(BinanceFuturesBroker):
 
     is_live = False
 
+    def __init__(self, secrets_path: Path = DEFAULT_SECRETS_PATH):
+        super().__init__(secrets_path=secrets_path)
+        self._dry_positions: dict[str, FuturesPosition] = {}
+        self._dry_triggers: dict[str, list[dict]] = {}
+        self._dry_orders_by_client_id: dict[str, dict] = {}
+
+    def fetch_positions(self, symbol: Optional[str] = None) -> list[FuturesPosition]:
+        if symbol is not None:
+            pos = self._dry_positions.get(symbol)
+            return [pos] if pos is not None else []
+        return list(self._dry_positions.values())
+
+    def fetch_trigger_orders(self, symbol: Optional[str] = None) -> list:
+        if symbol is not None:
+            return list(self._dry_triggers.get(symbol, []))
+        return [
+            row
+            for rows in self._dry_triggers.values()
+            for row in rows
+        ]
+
+    def fetch_all_open_orders(self) -> dict[str, list]:
+        return {
+            "regular": [],
+            "conditional": self.fetch_trigger_orders(),
+        }
+
     def cancel_order(self, symbol: str, order_id: str, conditional: bool = False) -> bool:
+        rows = self._dry_triggers.get(symbol, [])
+        self._dry_triggers[symbol] = [
+            row for row in rows if str(row.get("id")) != str(order_id)
+        ]
         return True  # dry-run: no-op, JANGAN sentuh exchange
 
     def cancel_all_orders(self, symbol: str) -> bool:
+        self._dry_triggers[symbol] = []
         return True  # dry-run: no-op, JANGAN sentuh exchange
 
-    def place_reduce_trigger(self, symbol, side, amount, stop_price, kind):
+    def place_reduce_trigger(
+        self, symbol, side, amount, stop_price, kind, client_order_id=None,
+    ):
+        order_id = client_order_id or (
+            f"dry-{str(kind).lower()}-"
+            f"{len(self._dry_triggers.get(symbol, [])) + 1}"
+        )
+        order_type = (
+            "STOP_MARKET"
+            if str(kind).upper() == "STOP"
+            else "TAKE_PROFIT_MARKET"
+        )
+        row = {
+            "id": str(order_id),
+            "type": order_type,
+            "side": str(side).lower(),
+            "amount": float(amount),
+            "stopPrice": float(stop_price),
+            "reduceOnly": True,
+            "info": {
+                "origType": order_type,
+                "stopPrice": str(stop_price),
+            },
+        }
+        self._dry_triggers.setdefault(symbol, []).append(row)
+        if client_order_id:
+            self._dry_orders_by_client_id[str(client_order_id)] = dict(row)
         return FuturesOrderResult(
             success=True, side=str(side).lower(), symbol=symbol,
             requested_amount=float(amount), filled_amount=0.0,
             avg_fill_price=float(stop_price), notional_usdt=0.0, fee_usdt=0.0,
-            reduce_only=True, order_id=None, dry_run=True,
-            raw={"kind": kind, "stop_price": float(stop_price)},
+            reduce_only=True, order_id=str(order_id), dry_run=True,
+            raw={
+                "kind": kind,
+                "stop_price": float(stop_price),
+                "clientOrderId": client_order_id,
+            },
         )
 
     def place_limit_order(self, symbol, side, amount, price, reduce_only=False):
@@ -430,6 +665,7 @@ class DryRunFuturesBroker(BinanceFuturesBroker):
 
     def place_market_order(
         self, symbol: str, side: str, amount: float, reduce_only: bool = False,
+        client_order_id: Optional[str] = None,
     ) -> FuturesOrderResult:
         side = side.lower()
         if side not in ("buy", "sell"):
@@ -437,14 +673,67 @@ class DryRunFuturesBroker(BinanceFuturesBroker):
         mark = self.fetch_mark_price(symbol)
         if mark <= 0:
             return _fail_order(symbol, side, amount, reduce_only, f"dry-run: no mark for {symbol}")
+        if reduce_only:
+            self._dry_positions.pop(symbol, None)
+        else:
+            position_side = "LONG" if side == "buy" else "SHORT"
+            self._dry_positions[symbol] = FuturesPosition(
+                symbol=symbol,
+                side=position_side,
+                contracts=float(amount),
+                entry_price=mark,
+                mark_price=mark,
+                liq_price=0.0,
+                leverage=0.0,
+                notional_usdt=float(amount) * mark,
+                unrealized_pnl=0.0,
+                margin_usdt=0.0,
+                raw={"source": "dry-run"},
+            )
         notional = float(amount) * mark
         fee = notional * 0.0004  # perp taker 0.04%
+        order_id = client_order_id or (
+            f"dry-market-{len(self._dry_orders_by_client_id) + 1}"
+        )
+        if client_order_id:
+            self._dry_orders_by_client_id[str(client_order_id)] = {
+                "id": str(order_id),
+                "clientOrderId": str(client_order_id),
+                "status": "closed",
+                "symbol": symbol,
+                "side": side,
+                "amount": float(amount),
+                "average": mark,
+                "reduceOnly": reduce_only,
+            }
         return FuturesOrderResult(
             success=True, side=side, symbol=symbol,
             requested_amount=float(amount), filled_amount=float(amount),
             avg_fill_price=mark, notional_usdt=notional, fee_usdt=fee,
-            reduce_only=reduce_only, order_id=None, dry_run=True,
-            raw={"source": "dry-run", "mark_price": mark},
+            reduce_only=reduce_only, order_id=str(order_id), dry_run=True,
+            raw={
+                "source": "dry-run",
+                "mark_price": mark,
+                "clientOrderId": client_order_id,
+            },
+        )
+
+    def fetch_order_by_client_id(
+        self,
+        symbol: str,
+        client_order_id: str,
+        conditional: bool = False,
+    ) -> Optional[dict]:
+        row = self._dry_orders_by_client_id.get(str(client_order_id))
+        return dict(row) if row is not None else None
+
+    def fetch_trigger_execution(
+        self,
+        symbol: str,
+        client_order_id: str,
+    ) -> Optional[dict]:
+        return self.fetch_order_by_client_id(
+            symbol, client_order_id, conditional=True,
         )
 
 

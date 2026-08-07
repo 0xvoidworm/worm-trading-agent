@@ -16,10 +16,10 @@ Usage:
     python scripts/daily_summary_telegram.py --dry      # print to stdout only
 
 Cron (8 AM WIB = 01:00 UTC):
-    0 1 * * * cd /home/owner/trading_agent && \\
-              /home/owner/trading_agent/.venv/bin/python \\
+    0 1 * * * cd /home/<user>/trading_agent && \\
+              /home/<user>/trading_agent/.venv/bin/python \\
               scripts/daily_summary_telegram.py \\
-              >> /home/owner/trading_agent/data/cron_daily.log 2>&1
+              >> /home/<user>/trading_agent/data/cron_daily.log 2>&1
 """
 from __future__ import annotations
 

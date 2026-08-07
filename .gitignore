@@ -42,3 +42,5 @@ backups/
 .worm-state.md
 *.bak-pathfix-*
 *.bak-controlplane-*
+
+CLAUDE.md

@@ -1,4 +1,12 @@
-# Trading Agent — Observability First
+```text
+╭─────────────────────────────────────────────────────────────────╮
+│   t r a d i n g - a g e n t                                     │
+│   [TRADING] observability first · sejak 18 April 2026           │
+╰─────────────────────────────────────────────────────────────────╯
+```
+
+> Dashboard dulu, agent kemudian. Edge yang tidak bisa divalidasi manual tidak
+> akan bisa di-debug otomatis — jadi fase ini **mengamati**, bukan mengeksekusi.
 
 **Status:** Step 0 (dashboard-first) · tanggal mulai: 2026-04-18
 
@@ -105,3 +113,15 @@ python scripts/signals.py --symbol BTC/USDT --since 24
 **Tahap 3+ (deferred, butuh bukti profit manual dulu)**
 - Semi-auto execution
 - Full auto (dengan kill-switch hard-coded)
+
+## Disclaimer
+
+Proyek ini untuk **riset dan pendidikan**, bukan nasihat finansial. Dashboard
+bersifat read-only: tidak mengeksekusi order, tidak menyimpan API key, dan
+tidak menghitung sizing. Semua angka berasal dari data publik (ccxt + DuckDB
+lokal) dan bisa salah atau tertunda. Keputusan trading dan seluruh risikonya
+milik pengguna. Live execution sengaja belum ada — lihat roadmap Tahap 3+.
+
+## Lisensi
+
+MIT — lihat [LICENSE](LICENSE).
